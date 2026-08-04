@@ -419,6 +419,7 @@
       <li class="nav-item" data-view="debriefs"><span class="dot"></span>Tech debriefs</li>
       <li class="nav-item" data-view="calls"><span class="dot"></span>Call log</li>
       <li class="nav-item" data-view="leads"><span class="dot"></span>Leads</li>
+      <li class="nav-item" data-view="estimates"><span class="dot"></span>Estimates</li>
       <li class="nav-item" data-view="callbacks"><span class="dot"></span>Callbacks</li>
       <li class="nav-item" data-view="installs"><span class="dot"></span>Installations</li>
       <li class="nav-item" data-view="warranty"><span class="dot"></span>Warranty &amp; parts</li>
@@ -481,7 +482,11 @@
     <div class="view" id="view-dispatch">
       <div class="module-head">
         <div><h2>Dispatch board</h2><div class="module-sub">All jobs assigned today, by technician</div></div>
-        <button class="btn btn-primary" onclick="openModal('dispatch')">+ Assign job</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-dispatch','jobs_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-dispatch','jobs_backup.pdf','Jobs')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('dispatch')">+ Assign job</button>
+        </div>
       </div>
       <table class="data" id="table-dispatch">
         <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Time</th><th>Status</th></tr>
@@ -492,6 +497,8 @@
     <div class="view" id="view-debriefs">
       <div class="module-head">
         <div><h2>Technician end-of-day debrief</h2><div class="module-sub">Each tech's summary of jobs completed today</div></div>
+        <button class="btn" onclick="downloadTableCSV('table-debriefs','tech_debriefs_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-debriefs','tech_debriefs_backup.pdf','Tech debriefs')">⬇ PDF</button>
       </div>
       <table class="data" id="table-debriefs">
         <tr><th>Tech</th><th>Jobs done</th><th>Notes</th><th>Submitted</th></tr>
@@ -502,7 +509,11 @@
     <div class="view" id="view-calls">
       <div class="module-head">
         <div><h2>Call log monitoring</h2><div class="module-sub">Inbound and outbound calls today</div></div>
-        <button class="btn btn-primary" onclick="openModal('call')">+ Log call</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-calls','call_log_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-calls','call_log_backup.pdf','Call log')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('call')">+ Log call</button>
+        </div>
       </div>
       <table class="data" id="table-calls">
         <tr><th>Time</th><th>Caller</th><th>Type</th><th>Outcome</th><th>Handled by</th></tr>
@@ -513,10 +524,31 @@
     <div class="view" id="view-leads">
       <div class="module-head">
         <div><h2>Lead monitoring</h2><div class="module-sub">New leads and follow-up status</div></div>
-        <button class="btn btn-primary" onclick="openModal('lead')">+ Add lead</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-leads','leads_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-leads','leads_backup.pdf','Leads')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('lead')">+ Add lead</button>
+        </div>
       </div>
+      <div class="stat-grid" id="lead-source-stats"></div>
       <table class="data" id="table-leads">
         <tr><th>Name</th><th>Source</th><th>Interest</th><th>Status</th></tr>
+      </table>
+    </div>
+
+    <!-- ============ ESTIMATES ============ -->
+    <div class="view" id="view-estimates">
+      <div class="module-head">
+        <div><h2>Estimates</h2><div class="module-sub">Installation estimates given, and their outcome</div></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-estimates','estimates_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-estimates','estimates_backup.pdf','Estimates')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('estimate')">+ Add estimate</button>
+        </div>
+      </div>
+      <div class="stat-grid" id="estimate-stats"></div>
+      <table class="data" id="table-estimates">
+        <tr><th>Date</th><th>Customer</th><th>Estimator</th><th>Amount</th><th>Status</th></tr>
       </table>
     </div>
 
@@ -524,7 +556,11 @@
     <div class="view" id="view-callbacks">
       <div class="module-head">
         <div><h2>Callback records</h2><div class="module-sub">Customer callbacks requested and completed</div></div>
-        <button class="btn btn-primary" onclick="openModal('callback')">+ Log callback</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-callbacks','callbacks_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-callbacks','callbacks_backup.pdf','Callbacks')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('callback')">+ Log callback</button>
+        </div>
       </div>
       <table class="data" id="table-callbacks">
         <tr><th>Customer</th><th>Reason</th><th>Requested</th><th>Status</th><th>Assigned to</th></tr>
@@ -535,7 +571,11 @@
     <div class="view" id="view-installs">
       <div class="module-head">
         <div><h2>Installations — new equipment</h2><div class="module-sub">Equipment installed, with serial/model, registration and install dates</div></div>
-        <button class="btn btn-primary" onclick="openModal('install')">+ Log installation</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-installs','installations_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-installs','installations_backup.pdf','Installations')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('install')">+ Log installation</button>
+        </div>
       </div>
       <table class="data" id="table-installs">
         <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Registration date</th></tr>
@@ -546,7 +586,11 @@
     <div class="view" id="view-warranty">
       <div class="module-head">
         <div><h2>Warranty &amp; parts replaced</h2><div class="module-sub">Warranty claims and parts swapped under warranty</div></div>
-        <button class="btn btn-primary" onclick="openModal('warranty')">+ Log warranty item</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-warranty','warranty_claims_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-warranty','warranty_claims_backup.pdf','Warranty claims')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('warranty')">+ Log warranty item</button>
+        </div>
       </div>
       <table class="data" id="table-warranty">
         <tr><th>Customer</th><th>Part replaced</th><th>Reason</th><th>Job</th><th>Status</th></tr>
@@ -557,10 +601,14 @@
     <div class="view" id="view-jbwarranty">
       <div class="module-head">
         <div><h2>2026 JB warranty clients</h2><div class="module-sub">Clients under JB warranty and years remaining</div></div>
-        <button class="btn btn-primary" onclick="openModal('jbwarranty')">+ Add client</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-jbwarranty','jb_warranty_clients_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-jbwarranty','jb_warranty_clients_backup.pdf','Jb warranty clients')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('jbwarranty')">+ Add client</button>
+        </div>
       </div>
       <table class="data" id="table-jbwarranty">
-        <tr><th>Customer</th><th>Equipment</th><th>Warranty start</th><th>Warranty length</th><th>Status</th></tr>
+        <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Warranty start</th><th>Warranty length</th><th>Status</th></tr>
       </table>
     </div>
 
@@ -568,7 +616,11 @@
     <div class="view" id="view-serviceplans">
       <div class="module-head">
         <div><h2>Service plans</h2><div class="module-sub">Customers on recurring service plans</div></div>
-        <button class="btn btn-primary" onclick="openModal('serviceplan')">+ Add plan</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-serviceplans','service_plans_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-serviceplans','service_plans_backup.pdf','Service plans')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('serviceplan')">+ Add plan</button>
+        </div>
       </div>
       <table class="data" id="table-serviceplans">
         <tr><th>Customer</th><th>Plan type</th><th>Amount</th><th>Billing frequency</th><th>Status</th></tr>
@@ -579,10 +631,14 @@
     <div class="view" id="view-invoices">
       <div class="module-head">
         <div><h2>Invoices — paid / unpaid</h2><div class="module-sub">Job billing status</div></div>
-        <button class="btn btn-primary" onclick="openModal('invoice')">+ Add invoice</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-invoices','invoices_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-invoices','invoices_backup.pdf','Invoices')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('invoice')">+ Add invoice</button>
+        </div>
       </div>
       <table class="data" id="table-invoices">
-        <tr><th>Invoice</th><th>Customer</th><th>Job</th><th>Amount</th><th>Status</th></tr>
+        <tr><th>Invoice</th><th>Customer</th><th>Category</th><th>Job</th><th>Amount</th><th>Status</th></tr>
       </table>
     </div>
 
@@ -628,12 +684,15 @@
   <div class="modal">
     <div class="modal-head"><h3>Log installation</h3><button class="modal-close" onclick="closeModal('install')">&times;</button></div>
     <form onsubmit="return submitInstall(event)">
-      <div class="field"><label>Customer name</label><input type="text" required></div>
-      <div class="field"><label>Equipment</label><input type="text" placeholder="e.g. Split-type AC unit" required></div>
-      <div class="field-row">
-        <div class="field"><label>Model no.</label><input type="text" required></div>
-        <div class="field"><label>Serial no.</label><input type="text" required></div>
+      <div class="field"><label>Customer name</label><input type="text" id="install-customer" required></div>
+      <div id="equipment-rows">
+        <div class="equipment-row field-row">
+          <div class="field"><label>Equipment</label><input type="text" class="eq-equipment" placeholder="e.g. Split-type AC unit" required></div>
+          <div class="field"><label>Model no.</label><input type="text" class="eq-model" required></div>
+          <div class="field"><label>Serial no.</label><input type="text" class="eq-serial" required></div>
+        </div>
       </div>
+      <button type="button" class="btn" onclick="addEquipmentRow()" style="margin-bottom:12px;">+ Add another equipment</button>
       <div class="field-row">
         <div class="field"><label>Install date</label><input type="date" required></div>
         <div class="field"><label>Registration date</label><input type="date"></div>
@@ -673,7 +732,8 @@
     <form onsubmit="return submitDispatch(event)">
       <div class="field-row">
         <div class="field"><label>Technician</label>
-          <select><option>Tech A</option><option>Tech B</option><option>Tech C</option><option>Tech D</option><option>Tech E</option><option>Tech F</option></select>
+          <input type="text" id="dispatch-tech-input" list="tech-list" placeholder="Type or select technician" required>
+          <datalist id="tech-list"></datalist>
         </div>
         <div class="field"><label>Customer name</label><input type="text" required></div>
       </div>
@@ -725,7 +785,8 @@
       <div class="field"><label>Name</label><input type="text" required></div>
       <div class="field-row">
         <div class="field"><label>Source</label>
-          <select><option>Website</option><option>Referral</option><option>Facebook</option><option>Google Ads</option></select>
+          <input type="text" id="lead-source-input" list="source-list" placeholder="e.g. Daikin, Google, Mitsubishi" required>
+          <datalist id="source-list"></datalist>
         </div>
         <div class="field"><label>Status</label>
           <select><option>Needs callback</option><option>Contacted</option><option>Booked</option></select>
@@ -740,12 +801,46 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="modal-estimate">
+  <div class="modal">
+    <div class="modal-head"><h3>Add estimate</h3><button class="modal-close" onclick="closeModal('estimate')">&times;</button></div>
+    <form onsubmit="return submitEstimate(event)">
+      <div class="field"><label>Customer name</label><input type="text" id="estimate-customer" required></div>
+      <div class="field-row">
+        <div class="field"><label>Estimator</label>
+          <input type="text" id="estimate-estimator-input" list="estimator-list" placeholder="Type or select name" required>
+          <datalist id="estimator-list"></datalist>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="estimate-date" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Amount ($)</label><input type="number" step="0.01" id="estimate-amount"></div>
+        <div class="field"><label>Status</label>
+          <select id="estimate-status"><option>Pending</option><option>Approved</option><option>Lost</option></select>
+        </div>
+      </div>
+      <div class="field"><label>Notes</label><input type="text" id="estimate-notes" placeholder="optional"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeModal('estimate')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save estimate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modal-jbwarranty">
   <div class="modal">
     <div class="modal-head"><h3>Add JB warranty client</h3><button class="modal-close" onclick="closeModal('jbwarranty')">&times;</button></div>
     <form onsubmit="return submitJbwarranty(event)">
-      <div class="field"><label>Customer name</label><input type="text" required></div>
-      <div class="field"><label>Equipment</label><input type="text" required></div>
+      <div class="field"><label>Customer name</label><input type="text" id="jbwarranty-customer" required></div>
+      <div id="jbwarranty-equipment-rows">
+        <div class="equipment-row field-row">
+          <div class="field"><label>Equipment</label><input type="text" class="jbw-equipment" required></div>
+          <div class="field"><label>Model no.</label><input type="text" class="jbw-model"></div>
+          <div class="field"><label>Serial no.</label><input type="text" class="jbw-serial"></div>
+        </div>
+      </div>
+      <button type="button" class="btn" onclick="addJbwarrantyEquipmentRow()" style="margin-bottom:12px;">+ Add another equipment</button>
       <div class="field-row">
         <div class="field"><label>Warranty start year</label><input type="number" placeholder="2026" min="2000" max="2100" required></div>
         <div class="field"><label>Warranty length (years)</label><input type="number" min="1" max="20" required></div>
@@ -764,7 +859,8 @@
     <form onsubmit="return submitServiceplan(event)">
       <div class="field"><label>Customer name</label><input type="text" required></div>
       <div class="field"><label>Plan type</label>
-        <select><option>Basic maintenance</option><option>Premium care</option></select>
+        <input type="text" id="serviceplan-plantype-input" list="plan-list" placeholder="Type or select plan" required>
+        <datalist id="plan-list"></datalist>
       </div>
       <div class="field-row">
         <div class="field"><label>Amount ($)</label><input type="number" step="0.01" required></div>
@@ -785,6 +881,9 @@
     <div class="modal-head"><h3>Add invoice</h3><button class="modal-close" onclick="closeModal('invoice')">&times;</button></div>
     <form onsubmit="return submitInvoice(event)">
       <div class="field"><label>Customer name</label><input type="text" required></div>
+      <div class="field"><label>Category</label>
+        <select><option>PMA/Service Plan</option><option>Installation</option><option>New Construction</option><option>Small Job</option><option>Service Call/Repair</option></select>
+      </div>
       <div class="field-row">
         <div class="field"><label>Amount ($)</label><input type="number" step="0.01" required></div>
         <div class="field"><label>Status</label>
@@ -802,6 +901,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
   const SUPABASE_URL = 'https://qjhntwuxcqeogzoxnbrg.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Lfh-WX52FpPQv8D8_TmiDg_M1wSX1Mi';
@@ -824,6 +925,10 @@
 
   function openModal(name){
     document.getElementById('modal-' + name).classList.add('active');
+    if(name === 'estimate'){
+      const dateField = document.getElementById('estimate-date');
+      if(dateField && !dateField.value) dateField.value = new Date().toISOString().slice(0,10);
+    }
   }
   function closeModal(name){
     document.getElementById('modal-' + name).classList.remove('active');
@@ -861,6 +966,34 @@
     document.getElementById('auth-submit').textContent = authMode === 'login' ? 'Log in' : 'Sign up';
     document.getElementById('auth-toggle').textContent = authMode === 'login' ? 'Need an account? Sign up' : 'Have an account? Log in';
     document.getElementById('auth-error').classList.remove('show');
+  }
+
+  const SEED_TECHS = ['Obed','Ricardo','Hernan','Rafa','Jayson','Milton','Oscar'];
+  const SEED_PLANS = ['Worry free maintenance','Commercial Maintenance','Heating Maintenance','Navien Yearly Maintenance','Cooling Maintenance'];
+  const SEED_SOURCES = ['Daikin','Google','Mitsubishi','Website','Referral','Facebook','Google Ads'];
+
+  async function populateSuggestionLists(){
+    try{
+      const { data: jobRows } = await db.from('jobs').select('technician');
+      const usedTechs = (jobRows||[]).map(r => r.technician).filter(Boolean);
+      const allTechs = Array.from(new Set([...SEED_TECHS, ...usedTechs])).sort();
+      document.getElementById('tech-list').innerHTML = allTechs.map(t => `<option value="${t}">`).join('');
+
+      const { data: planRows } = await db.from('service_plans').select('plan_type');
+      const usedPlans = (planRows||[]).map(r => r.plan_type).filter(Boolean);
+      const allPlans = Array.from(new Set([...SEED_PLANS, ...usedPlans])).sort();
+      document.getElementById('plan-list').innerHTML = allPlans.map(p => `<option value="${p}">`).join('');
+
+      const { data: leadRows } = await db.from('leads').select('source');
+      const usedSources = (leadRows||[]).map(r => r.source).filter(Boolean);
+      const allSources = Array.from(new Set([...SEED_SOURCES, ...usedSources])).sort();
+      document.getElementById('source-list').innerHTML = allSources.map(s => `<option value="${s}">`).join('');
+
+      const { data: estRows } = await db.from('estimates').select('estimator');
+      const usedEstimators = (estRows||[]).map(r => r.estimator).filter(Boolean);
+      const allEstimators = Array.from(new Set([...SEED_TECHS, ...usedEstimators])).sort();
+      document.getElementById('estimator-list').innerHTML = allEstimators.map(e => `<option value="${e}">`).join('');
+    } catch(err){ /* non-critical, ignore */ }
   }
 
   async function handleAuth(e){
@@ -904,6 +1037,7 @@
       document.getElementById('app').style.display = 'flex';
       document.getElementById('whoami').textContent = (profile.full_name || currentUserEmail) + ' · ' + currentRole;
       applyRoleUI();
+      populateSuggestionLists();
     } else {
       currentRole = null;
       document.getElementById('app').style.display = 'none';
@@ -950,6 +1084,7 @@
       else if(name === 'debriefs') await loadDebriefs();
       else if(name === 'calls') await loadCalls();
       else if(name === 'leads') await loadLeads();
+      else if(name === 'estimates') await loadEstimates();
       else if(name === 'callbacks') await loadCallbacks();
       else if(name === 'installs') await loadInstalls();
       else if(name === 'warranty') await loadWarranty();
@@ -1000,6 +1135,37 @@
       const html = `<tr><td>${row.name}</td><td>${row.source||'—'}</td><td>${row.interest||'—'}</td><td>${pillSpan(row.status, statusCls)}</td></tr>`;
       document.getElementById('table-leads').insertAdjacentHTML('beforeend', html);
     });
+    const counts = {};
+    (data||[]).forEach(row => { const s = row.source || 'Unknown'; counts[s] = (counts[s]||0) + 1; });
+    const sourceStats = Object.keys(counts).sort().map(s => `<div class="stat"><div class="stat-label">${s}</div><div class="stat-value">${counts[s]}</div></div>`).join('');
+    document.getElementById('lead-source-stats').innerHTML = sourceStats || '<div class="stat"><div class="stat-label">No leads yet</div><div class="stat-value">0</div></div>';
+  }
+
+  async function loadEstimates(){
+    const { data } = await db.from('estimates').select('*, customers(first_name,last_name)').order('estimate_date', {ascending:false});
+    clearRows('table-estimates');
+    (data||[]).forEach(row => {
+      const statusCls = row.status === 'Approved' ? 'paid' : (row.status === 'Lost' ? 'unpaid' : 'waiting');
+      const amount = row.amount != null ? '$' + Number(row.amount).toLocaleString() : '—';
+      const html = `<tr><td class="mono">${fmtDate(row.estimate_date)}</td><td>${custName(row)}</td><td>${row.estimator||'—'}</td><td class="mono">${amount}</td><td>${pillSpan(row.status, statusCls)}</td></tr>`;
+      document.getElementById('table-estimates').insertAdjacentHTML('beforeend', html);
+    });
+
+    const rows = data || [];
+    const today = new Date().toISOString().slice(0,10);
+    const weekAgo = new Date(Date.now() - 6*24*60*60*1000).toISOString().slice(0,10);
+    const todayCount = rows.filter(r => r.estimate_date === today).length;
+    const weekCount = rows.filter(r => r.estimate_date >= weekAgo && r.estimate_date <= today).length;
+    const approved = rows.filter(r => r.status === 'Approved').length;
+    const pending = rows.filter(r => r.status === 'Pending').length;
+    const lost = rows.filter(r => r.status === 'Lost').length;
+    document.getElementById('estimate-stats').innerHTML = `
+      <div class="stat"><div class="stat-label">Today</div><div class="stat-value">${todayCount}</div></div>
+      <div class="stat"><div class="stat-label">This week</div><div class="stat-value">${weekCount}</div></div>
+      <div class="stat"><div class="stat-label">Approved</div><div class="stat-value">${approved}</div></div>
+      <div class="stat warn"><div class="stat-label">Pending</div><div class="stat-value">${pending}</div></div>
+      <div class="stat warn"><div class="stat-label">Lost</div><div class="stat-value">${lost}</div></div>
+    `;
   }
 
   async function loadCallbacks(){
@@ -1037,7 +1203,7 @@
     (data||[]).forEach(row => {
       const active = (row.warranty_start_year + row.warranty_length_years) > new Date().getFullYear();
       const statusHtml = active ? pillSpan('Active','paid') : pillSpan('Expired','unpaid');
-      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td></tr>`;
+      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td>${row.model||'—'}</td><td>${row.serial||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td></tr>`;
       document.getElementById('table-jbwarranty').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -1056,7 +1222,7 @@
     clearRows('table-invoices');
     (data||[]).forEach(row => {
       const statusCls = row.status === 'Paid' ? 'paid' : 'unpaid';
-      const html = `<tr><td class="mono">INV-${row.invoice_number}</td><td>${custName(row)}</td><td class="mono">—</td><td class="mono">$${Number(row.amount||0).toLocaleString()}</td><td>${pillSpan(row.status, statusCls)}</td></tr>`;
+      const html = `<tr><td class="mono">INV-${row.invoice_number}</td><td>${custName(row)}</td><td>${row.category||'—'}</td><td class="mono">—</td><td class="mono">$${Number(row.amount||0).toLocaleString()}</td><td>${pillSpan(row.status, statusCls)}</td></tr>`;
       document.getElementById('table-invoices').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -1084,16 +1250,74 @@
     return false;
   }
 
+  function downloadTableCSV(tableId, filename){
+    const table = document.getElementById(tableId);
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const csv = rows.map(row =>
+      Array.from(row.querySelectorAll('th,td')).map(cell => {
+        const text = cell.textContent.replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+        return `"${text}"`;
+      }).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadTablePDF(tableId, filename, title){
+    const table = document.getElementById(tableId);
+    const rows = Array.from(table.querySelectorAll('tr')).map(row =>
+      Array.from(row.querySelectorAll('th,td')).map(cell => cell.textContent.replace(/\s+/g, ' ').trim())
+    );
+    const head = [rows[0]];
+    const body = rows.slice(1);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(14);
+    doc.text(title, 14, 15);
+    doc.setFontSize(9);
+    doc.text(new Date().toLocaleString(), 14, 21);
+    doc.autoTable({ head, body, startY: 26, styles: { fontSize: 8 } });
+    doc.save(filename);
+  }
+
+  function addEquipmentRow(){
+    const rows = document.getElementById('equipment-rows');
+    const row = document.createElement('div');
+    row.className = 'equipment-row field-row';
+    row.innerHTML = `
+      <div class="field"><label>Equipment</label><input type="text" class="eq-equipment" placeholder="e.g. Split-type AC unit" required></div>
+      <div class="field"><label>Model no.</label><input type="text" class="eq-model" required></div>
+      <div class="field"><label>Serial no.</label><input type="text" class="eq-serial" required></div>
+      <button type="button" class="btn" onclick="this.parentElement.remove()" style="align-self:center;">Remove</button>
+    `;
+    rows.appendChild(row);
+  }
+
   async function submitInstall(e){
     e.preventDefault();
     const f = e.target;
-    const [customer, equipment, model, serial] = f.querySelectorAll('input[type=text]');
+    const customer = f.querySelector('#install-customer');
     const [installDate, regDate] = f.querySelectorAll('input[type=date]');
+    const equipmentRows = f.querySelectorAll('.equipment-row');
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const { error } = await db.from('installations').insert({ customer_id, equipment: equipment.value, model: model.value, serial: serial.value, install_date: installDate.value || null, registration_date: regDate.value || null });
-      if(error) throw error;
-      f.reset(); closeModal('install'); showToast('Installation logged'); await loadInstalls();
+      for(const row of equipmentRows){
+        const equipment = row.querySelector('.eq-equipment').value;
+        const model = row.querySelector('.eq-model').value;
+        const serial = row.querySelector('.eq-serial').value;
+        const { error } = await db.from('installations').insert({ customer_id, equipment, model, serial, install_date: installDate.value || null, registration_date: regDate.value || null });
+        if(error) throw error;
+      }
+      f.reset();
+      document.getElementById('equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
+      closeModal('install'); showToast('Installation logged'); await loadInstalls();
     } catch(err){ alert(err.message); }
     return false;
   }
@@ -1116,7 +1340,8 @@
     e.preventDefault();
     const f = e.target;
     const customer = f.querySelector('input[type=text]');
-    const [tech, type, status] = f.querySelectorAll('select');
+    const tech = f.querySelector('#dispatch-tech-input');
+    const [type, status] = f.querySelectorAll('select');
     const scheduled_date = new Date().toISOString().slice(0,10);
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
@@ -1145,7 +1370,8 @@
     e.preventDefault();
     const f = e.target;
     const [name, interest] = f.querySelectorAll('input[type=text]');
-    const [source, status] = f.querySelectorAll('select');
+    const source = f.querySelector('#lead-source-input');
+    const [status] = f.querySelectorAll('select');
     try{
       const { error } = await db.from('leads').insert({ name: name.value, source: source.value, interest: interest.value, status: status.value });
       if(error) throw error;
@@ -1154,16 +1380,65 @@
     return false;
   }
 
+  async function submitEstimate(e){
+    e.preventDefault();
+    const customer = document.getElementById('estimate-customer');
+    const estimator = document.getElementById('estimate-estimator-input');
+    const date = document.getElementById('estimate-date');
+    const amount = document.getElementById('estimate-amount');
+    const status = document.getElementById('estimate-status');
+    const notes = document.getElementById('estimate-notes');
+    try{
+      const customer_id = await findOrCreateCustomer(customer.value);
+      const { error } = await db.from('estimates').insert({
+        customer_id,
+        estimator: estimator.value,
+        estimate_date: date.value,
+        amount: amount.value ? parseFloat(amount.value) : null,
+        status: status.value,
+        notes: notes.value || null
+      });
+      if(error) throw error;
+      e.target.reset(); closeModal('estimate'); showToast('Estimate added'); await loadEstimates();
+    } catch(err){ alert(err.message); }
+    return false;
+  }
+
+  function addJbwarrantyEquipmentRow(){
+    const rows = document.getElementById('jbwarranty-equipment-rows');
+    const row = document.createElement('div');
+    row.className = 'equipment-row field-row';
+    row.innerHTML = `
+      <div class="field"><label>Equipment</label><input type="text" class="jbw-equipment" required></div>
+      <div class="field"><label>Model no.</label><input type="text" class="jbw-model"></div>
+      <div class="field"><label>Serial no.</label><input type="text" class="jbw-serial"></div>
+      <button type="button" class="btn" onclick="this.parentElement.remove()" style="align-self:center;">Remove</button>
+    `;
+    rows.appendChild(row);
+  }
+
   async function submitJbwarranty(e){
     e.preventDefault();
     const f = e.target;
-    const [customer, equipment] = f.querySelectorAll('input[type=text]');
+    const customer = document.getElementById('jbwarranty-customer');
     const [startYear, length] = f.querySelectorAll('input[type=number]');
+    const equipmentRows = f.querySelectorAll('.equipment-row');
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const { error } = await db.from('jb_warranty_clients').insert({ customer_id, equipment: equipment.value, warranty_start_year: parseInt(startYear.value), warranty_length_years: parseInt(length.value) });
-      if(error) throw error;
-      f.reset(); closeModal('jbwarranty'); showToast('Client added'); await loadJbwarranty();
+      for(const row of equipmentRows){
+        const equipment = row.querySelector('.jbw-equipment').value;
+        const model = row.querySelector('.jbw-model').value;
+        const serial = row.querySelector('.jbw-serial').value;
+        const { error } = await db.from('jb_warranty_clients').insert({
+          customer_id, equipment, model, serial,
+          warranty_start_year: parseInt(startYear.value),
+          warranty_length_years: parseInt(length.value)
+        });
+        if(error) throw error;
+      }
+      f.reset();
+      document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
+      closeModal('jbwarranty'); showToast('Client added'); await loadJbwarranty();
     } catch(err){ alert(err.message); }
     return false;
   }
@@ -1173,7 +1448,8 @@
     const f = e.target;
     const customer = f.querySelector('input[type=text]');
     const amount = f.querySelector('input[type=number]');
-    const [planType, frequency] = f.querySelectorAll('select');
+    const planType = f.querySelector('#serviceplan-plantype-input');
+    const [frequency] = f.querySelectorAll('select');
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
       const { error } = await db.from('service_plans').insert({ customer_id, plan_type: planType.value, amount: parseFloat(amount.value), billing_frequency: frequency.value, status: 'Current' });
@@ -1188,10 +1464,10 @@
     const f = e.target;
     const customer = f.querySelector('input[type=text]');
     const amount = f.querySelector('input[type=number]');
-    const status = f.querySelector('select');
+    const [category, status] = f.querySelectorAll('select');
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const { error } = await db.from('invoices').insert({ customer_id, amount: parseFloat(amount.value), status: status.value, invoice_date: new Date().toISOString().slice(0,10) });
+      const { error } = await db.from('invoices').insert({ customer_id, category: category.value, amount: parseFloat(amount.value), status: status.value, invoice_date: new Date().toISOString().slice(0,10) });
       if(error) throw error;
       f.reset(); closeModal('invoice'); showToast('Invoice added'); await loadInvoices();
     } catch(err){ alert(err.message); }
@@ -1201,19 +1477,34 @@
   // ---------- DAILY REPORT ----------
   async function computeLiveReport(){
     const today = new Date().toISOString().slice(0,10);
-    const [jobs, calls, callbacks, installs, warranty, invoices] = await Promise.all([
-      db.from('jobs').select('status', {count:'exact'}),
+    const [jobs, calls, callbacks, installs, warranty, invoices, estimates, leads] = await Promise.all([
+      db.from('jobs').select('status, job_type', {count:'exact'}),
       db.from('call_log').select('outcome'),
       db.from('callbacks').select('status'),
       db.from('installations').select('id').eq('install_date', today),
       db.from('warranty_claims').select('status'),
-      db.from('invoices').select('status')
+      db.from('invoices').select('status'),
+      db.from('estimates').select('status'),
+      db.from('leads').select('status')
     ]);
     const jobsData = jobs.data || [];
     const missed_calls = (calls.data||[]).filter(c => c.outcome === 'Missed').length;
     const callbacks_pending = (callbacks.data||[]).filter(c => c.status === 'Pending').length;
     const warranty_pending = (warranty.data||[]).filter(w => w.status === 'Pending').length;
     const unpaid_invoices = (invoices.data||[]).filter(i => i.status === 'Unpaid').length;
+
+    const estimatesData = estimates.data || [];
+    const estimates_created = estimatesData.length;
+    const estimates_approved = estimatesData.filter(e => e.status === 'Approved').length;
+    const estimates_lost = estimatesData.filter(e => e.status === 'Lost').length;
+
+    const leadsData = leads.data || [];
+    const leads_won = leadsData.filter(l => l.status === 'Booked').length;
+
+    const jobTypes = ['Repair','Maintenance','Install','Warranty'];
+    const jobs_by_type = {};
+    jobTypes.forEach(t => { jobs_by_type[t] = jobsData.filter(j => j.job_type === t && j.status === 'Completed').length; });
+
     return {
       jobs_total: jobsData.length,
       jobs_completed: jobsData.filter(j => j.status === 'Completed').length,
@@ -1223,14 +1514,28 @@
       installations_completed: (installs.data||[]).length,
       warranty_pending,
       unpaid_invoices,
+      estimates_created,
+      estimates_approved,
+      estimates_lost,
+      leads_won,
+      jobs_by_type,
       details_json: {
         total_calls: (calls.data||[]).length,
-        total_leads_open: null
+        total_leads_open: null,
+        estimates_created,
+        estimates_approved,
+        estimates_lost,
+        leads_won,
+        jobs_by_type
       }
     };
   }
 
   function renderReportBlocks(r){
+    const jobsByType = r.jobs_by_type || {};
+    const jobTypeRows = ['Repair','Maintenance','Install','Warranty'].map(t =>
+      `<div class="report-line"><span>${t}</span><span>${jobsByType[t] ?? 0}</span></div>`
+    ).join('');
     return `
       <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat"><div class="stat-label">Jobs total</div><div class="stat-value">${r.jobs_total ?? '—'}</div></div>
@@ -1241,6 +1546,14 @@
         <div class="stat"><div class="stat-label">Installs completed</div><div class="stat-value">${r.installations_completed ?? '—'}</div></div>
         <div class="stat warn"><div class="stat-label">Warranty pending</div><div class="stat-value">${r.warranty_pending ?? '—'}</div></div>
         <div class="stat warn"><div class="stat-label">Unpaid invoices</div><div class="stat-value">${r.unpaid_invoices ?? '—'}</div></div>
+        <div class="stat"><div class="stat-label">Estimates created</div><div class="stat-value">${r.estimates_created ?? '—'}</div></div>
+        <div class="stat"><div class="stat-label">Estimates won/approved</div><div class="stat-value">${r.estimates_approved ?? '—'}</div></div>
+        <div class="stat warn"><div class="stat-label">Estimates lost</div><div class="stat-value">${r.estimates_lost ?? '—'}</div></div>
+        <div class="stat"><div class="stat-label">Leads won</div><div class="stat-value">${r.leads_won ?? '—'}</div></div>
+      </div>
+      <div class="report-block">
+        <h3>Jobs completed by type</h3>
+        ${jobTypeRows}
       </div>
       <div class="report-block">
         <h3>Notes</h3>
@@ -1262,8 +1575,9 @@
       document.getElementById('report-sub').textContent = 'Most recent report from dispatch';
       const { data } = await db.from('daily_reports').select('*').order('report_date', {ascending:false}).limit(1).maybeSingle();
       if(!data){ body.innerHTML = '<div class="report-block"><h3>No report yet</h3></div>'; return; }
+      const merged = { ...data, ...(data.details_json || {}) };
       document.getElementById('report-title').textContent = 'Daily report — ' + fmtDate(data.report_date);
-      body.innerHTML = renderReportBlocks(data);
+      body.innerHTML = renderReportBlocks(merged);
     }
   }
 
