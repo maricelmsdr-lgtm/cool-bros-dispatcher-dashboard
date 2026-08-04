@@ -103,7 +103,7 @@
   }
 
   /* ---------- MAIN ---------- */
-  .main{flex:1; padding:26px 34px 60px 34px; max-width:1180px;}
+  .main{flex:1; padding:26px 34px 60px 34px; max-width:1180px; min-width:0;}
   .topbar{
     display:flex; align-items:flex-start; justify-content:space-between;
     margin-bottom:26px;
@@ -287,6 +287,9 @@
     width:100%; border-collapse:collapse;
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
     overflow:hidden;
+  }
+  .table-scroll{
+    overflow-x:auto; border-radius:var(--radius); -webkit-overflow-scrolling:touch;
   }
   table.data th{
     text-align:left; font-family:'JetBrains Mono',monospace; font-size:10px;
@@ -501,9 +504,11 @@
           <button class="btn btn-primary" onclick="openModal('dispatch', true)">+ Assign job</button>
         </div>
       </div>
-      <table class="data" id="table-dispatch">
+      <div class="table-scroll">
+<table class="data" id="table-dispatch">
         <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Time</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ TECH DEBRIEFS ============ -->
@@ -513,9 +518,11 @@
         <button class="btn" onclick="downloadTableCSV('table-debriefs','tech_debriefs_backup.csv')">⬇ CSV</button>
           <button class="btn" onclick="downloadTablePDF('table-debriefs','tech_debriefs_backup.pdf','Tech debriefs')">⬇ PDF</button>
       </div>
-      <table class="data" id="table-debriefs">
+      <div class="table-scroll">
+<table class="data" id="table-debriefs">
         <tr><th>Tech</th><th>Jobs done</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ CALLS ============ -->
@@ -528,9 +535,11 @@
           <button class="btn btn-primary" onclick="openModal('call', true)">+ Log call</button>
         </div>
       </div>
-      <table class="data" id="table-calls">
+      <div class="table-scroll">
+<table class="data" id="table-calls">
         <tr><th>Time</th><th>Caller</th><th>Type</th><th>Outcome</th><th>Handled by</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ LEADS ============ -->
@@ -544,9 +553,11 @@
         </div>
       </div>
       <div class="stat-grid" id="lead-source-stats"></div>
-      <table class="data" id="table-leads">
+      <div class="table-scroll">
+<table class="data" id="table-leads">
         <tr><th>Name</th><th>Source</th><th>Interest</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ ESTIMATES ============ -->
@@ -560,9 +571,11 @@
         </div>
       </div>
       <div class="stat-grid" id="estimate-stats"></div>
-      <table class="data" id="table-estimates">
+      <div class="table-scroll">
+<table class="data" id="table-estimates">
         <tr><th>Date</th><th>Customer</th><th>Estimator</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ CALLBACKS ============ -->
@@ -575,9 +588,11 @@
           <button class="btn btn-primary" onclick="openModal('callback', true)">+ Log callback</button>
         </div>
       </div>
-      <table class="data" id="table-callbacks">
+      <div class="table-scroll">
+<table class="data" id="table-callbacks">
         <tr><th>Customer</th><th>Reason</th><th>Requested</th><th>Status</th><th>Assigned to</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ INSTALLATIONS ============ -->
@@ -590,9 +605,11 @@
           <button class="btn btn-primary" onclick="openModal('install', true)">+ Log installation</button>
         </div>
       </div>
-      <table class="data" id="table-installs">
+      <div class="table-scroll">
+<table class="data" id="table-installs">
         <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Registration date</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ WARRANTY & PARTS ============ -->
@@ -605,9 +622,11 @@
           <button class="btn btn-primary" onclick="openModal('warranty', true)">+ Log warranty item</button>
         </div>
       </div>
-      <table class="data" id="table-warranty">
+      <div class="table-scroll">
+<table class="data" id="table-warranty">
         <tr><th>Customer</th><th>Part replaced</th><th>Reason</th><th>Job</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ JB WARRANTY CLIENTS ============ -->
@@ -620,9 +639,11 @@
           <button class="btn btn-primary" onclick="openModal('jbwarranty', true)">+ Add client</button>
         </div>
       </div>
-      <table class="data" id="table-jbwarranty">
+      <div class="table-scroll">
+<table class="data" id="table-jbwarranty">
         <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Warranty start</th><th>Warranty length</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ SERVICE PLANS ============ -->
@@ -635,9 +656,11 @@
           <button class="btn btn-primary" onclick="openModal('serviceplan', true)">+ Add plan</button>
         </div>
       </div>
-      <table class="data" id="table-serviceplans">
+      <div class="table-scroll">
+<table class="data" id="table-serviceplans">
         <tr><th>Customer</th><th>Plan type</th><th>Amount</th><th>Billing frequency</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ INVOICES ============ -->
@@ -650,9 +673,11 @@
           <button class="btn btn-primary" onclick="openModal('invoice', true)">+ Add invoice</button>
         </div>
       </div>
-      <table class="data" id="table-invoices">
+      <div class="table-scroll">
+<table class="data" id="table-invoices">
         <tr><th>Invoice</th><th>Customer</th><th>Category</th><th>Job</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
       </table>
+      </div>
     </div>
 
     <!-- ============ DAILY REPORT ============ -->
@@ -1093,7 +1118,8 @@
   function applyRoleUI(){
     const nav = document.getElementById('nav');
     if(currentRole === 'boss'){
-      nav.querySelectorAll('.nav-item').forEach(i => { i.style.display = (i.dataset.view === 'report') ? '' : 'none'; });
+      const allowed = ['report', 'dashboard', 'installs', 'jbwarranty', 'serviceplans'];
+      nav.querySelectorAll('.nav-item').forEach(i => { i.style.display = allowed.includes(i.dataset.view) ? '' : 'none'; });
       document.getElementById('report-save-btn').style.display = 'none';
       goTo('report');
     } else {
