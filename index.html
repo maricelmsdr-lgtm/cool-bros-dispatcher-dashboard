@@ -694,7 +694,7 @@
       </div>
       <div class="table-scroll">
         <table class="data" id="table-equipmentjb">
-          <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>JB warranty</th><th>Certificate</th><th>Actions</th></tr>
+          <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Equipment warranty</th><th>JB warranty</th><th>Certificate</th><th>Actions</th></tr>
         </table>
       </div>
     </div>
@@ -820,12 +820,16 @@
       </div>
       <div class="field-row">
         <div class="field"><label>Technician / Installer</label><input type="text" id="eqjb-technician" placeholder="Optional"></div>
-        <div class="field"><label>JB Warranty Status</label><select id="eqjb-jb-status"><option>Pending</option><option>Registered</option><option>Active</option><option>Expired</option><option>Not Applicable</option></select></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>JB Warranty Length (years)</label><input type="number" id="eqjb-jb-length" min="1" max="20" placeholder="e.g. 10"></div>
-        <div class="field"><label>Warranty certificate</label><input type="file" id="eqjb-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current" id="eqjb-cert-current"></div></div>
+        <div class="field"><label>Equipment Warranty Status</label><select id="eqjb-eq-status"><option>Pending</option><option>Registered</option><option>Active</option><option>Expired</option><option>Not Applicable</option></select></div>
+        <div class="field"><label>Equipment Warranty Length (years)</label><input type="number" id="eqjb-eq-length" min="1" max="20" placeholder="e.g. 5"></div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>JB Warranty Status</label><select id="eqjb-jb-status"><option>Pending</option><option>Registered</option><option>Active</option><option>Expired</option><option>Not Applicable</option></select></div>
+        <div class="field"><label>JB Warranty Length (years)</label><input type="number" id="eqjb-jb-length" min="1" max="20" placeholder="e.g. 10"></div>
+      </div>
+      <div class="field"><label>Warranty certificate</label><input type="file" id="eqjb-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current" id="eqjb-cert-current"></div></div>
       <div class="field"><label>Notes</label><textarea id="eqjb-notes" placeholder="Optional equipment or warranty notes"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('equipmentjb')">Cancel</button>
@@ -1815,7 +1819,7 @@ Cool Bros Heating & Air Conditioning`;
       const isOpen = eqjbOpenGroups.has(gid);
 
       const headerHtml = `<tr class="eqjb-group-row" data-gid="${gid}" onclick="toggleEquipmentJbGroup('${gid}')">
-        <td colspan="9">
+        <td colspan="10">
           <span class="eqjb-group-toggle" id="${gid}-arrow">${isOpen ? '▾' : '▸'}</span>${name}<span class="eqjb-group-meta">${rows.length} equipment${rows.length>1?'s':''} · ${activeCount} active/registered JB warranty</span>
           <button class="btn-icon" style="float:right;" onclick="event.stopPropagation(); addEquipmentForCustomer('${gid}')">+ Add equipment</button>
         </td>
@@ -1825,9 +1829,11 @@ Cool Bros Heating & Air Conditioning`;
       rows.forEach(row => {
         const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
         const send = row.certificate_url ? `<button class="btn-icon" onclick="sendEquipmentJbDocument('${row.id}')">Send</button>` : '';
+        const eq = row.equipment_warranty_status || '—';
+        const eqCls = ['Active','Registered'].includes(eq) ? 'paid' : (eq === 'Expired' ? 'unpaid' : 'pending');
         const jb = row.jb_warranty_status || '—';
         const jbCls = ['Active','Registered'].includes(jb) ? 'paid' : (jb === 'Expired' ? 'unpaid' : 'pending');
-        const html = `<tr class="eqjb-detail-row ${gid}-detail" style="${isOpen ? 'display:table-row;' : ''}"><td></td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
+        const html = `<tr class="eqjb-detail-row ${gid}-detail" style="${isOpen ? 'display:table-row;' : ''}"><td></td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(eq,eqCls)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
         document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', html);
       });
     });
@@ -2025,6 +2031,8 @@ Cool Bros Heating & Air Conditioning`;
         install_date: document.getElementById('eqjb-install-date').value || null,
         registration_date: document.getElementById('eqjb-reg-date').value || null,
         technician: document.getElementById('eqjb-technician').value || null,
+        equipment_warranty_status: document.getElementById('eqjb-eq-status').value,
+        equipment_warranty_length_years: document.getElementById('eqjb-eq-length').value ? parseInt(document.getElementById('eqjb-eq-length').value) : null,
         jb_warranty_status: document.getElementById('eqjb-jb-status').value,
         jb_warranty_length_years: document.getElementById('eqjb-jb-length').value ? parseInt(document.getElementById('eqjb-jb-length').value) : null,
         notes: document.getElementById('eqjb-notes').value || null
@@ -2034,7 +2042,7 @@ Cool Bros Heating & Air Conditioning`;
       if(editState.equipmentjb){ result = await db.from('installations').update(payload).eq('id', editState.equipmentjb); }
       else { result = await db.from('installations').insert(payload); }
       if(result.error){
-        if(/brand|jb_warranty|technician|notes/i.test(result.error.message||'')) throw new Error('Your Supabase database needs the Equipment & JB Warranty migration. Run the SQL file included with this build, then save again.');
+        if(/brand|jb_warranty|equipment_warranty|technician|notes/i.test(result.error.message||'')) throw new Error('Your Supabase database needs the Equipment & JB Warranty migration. Run the SQL file included with this build, then save again.');
         throw result.error;
       }
       editState.equipmentjb = null; f.reset(); document.getElementById('eqjb-cert-current').innerHTML='';
@@ -2059,6 +2067,8 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('eqjb-install-date').value = row.install_date || '';
     document.getElementById('eqjb-reg-date').value = row.registration_date || '';
     document.getElementById('eqjb-technician').value = row.technician || '';
+    document.getElementById('eqjb-eq-status').value = row.equipment_warranty_status || 'Pending';
+    document.getElementById('eqjb-eq-length').value = row.equipment_warranty_length_years || '';
     document.getElementById('eqjb-jb-status').value = row.jb_warranty_status || 'Pending';
     document.getElementById('eqjb-jb-length').value = row.jb_warranty_length_years || '';
     document.getElementById('eqjb-notes').value = row.notes || '';
