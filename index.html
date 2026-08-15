@@ -597,13 +597,36 @@
         </div>
       </div>
       <div class="callfilter-bar">
-        <input type="text" id="debrief-search" class="callfilter-search" style="margin-left:0; flex:1;" placeholder="Search technician or notes…" oninput="filterDebriefs()">
-        <button type="button" class="btn" onclick="filterDebriefs()">Search</button>
-        <button type="button" class="btn" onclick="clearDebriefSearch()">Clear</button>
+        <div class="callfilter-presets" id="debrief-presets">
+          <button type="button" class="chip" data-preset="today" onclick="setDebriefPreset('today')">Today</button>
+          <button type="button" class="chip" data-preset="yesterday" onclick="setDebriefPreset('yesterday')">Yesterday</button>
+          <button type="button" class="chip active" data-preset="last7" onclick="setDebriefPreset('last7')">Last 7 Days</button>
+          <button type="button" class="chip" data-preset="thismonth" onclick="setDebriefPreset('thismonth')">This Month</button>
+          <button type="button" class="chip" data-preset="lastmonth" onclick="setDebriefPreset('lastmonth')">Last Month</button>
+          <button type="button" class="chip" data-preset="all" onclick="setDebriefPreset('all')">All time</button>
+          <button type="button" class="chip" data-preset="custom" onclick="setDebriefPreset('custom')">Custom</button>
+        </div>
+        <div class="callfilter-range" id="debrief-custom-range" style="display:none;">
+          <input type="date" id="debrief-from" onchange="onDebriefCustomRangeChange()">
+          <span>to</span>
+          <input type="date" id="debrief-to" onchange="onDebriefCustomRangeChange()">
+        </div>
+        <input type="text" id="debrief-search" class="callfilter-search" placeholder="Search technician or notes…" oninput="filterDebriefs()">
       </div>
+      <div class="callfilter-label" id="debrief-range-label">Last 7 Days</div>
+
+      <div id="debrief-missing-wrap" style="display:none; margin-bottom:18px;">
+        <div class="module-sub" style="margin-bottom:8px; color:var(--amber);">⚠ Missing debriefs — last 14 days</div>
+        <div class="table-scroll">
+          <table class="data" id="table-debriefs-missing">
+            <tr><th>Tech</th><th>Date</th><th>Jobs dispatched</th><th>Actions</th></tr>
+          </table>
+        </div>
+      </div>
+
       <div class="table-scroll">
 <table class="data" id="table-debriefs">
-        <tr><th>Tech</th><th>Date</th><th>Jobs done</th><th>Linked jobs</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
+        <tr><th>Tech</th><th>Date</th><th>Jobs done</th><th>Linked jobs</th><th>Status</th><th>Photos</th><th>Notes</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -953,6 +976,15 @@
         <label>Jobs completed (no dispatched jobs matched — enter manually)</label>
         <input type="number" id="debrief-jobs" min="0">
       </div>
+      <div class="field-row">
+        <div class="field"><label>Status</label>
+          <select id="debrief-status"><option>Submitted</option><option>Needs Follow-up</option><option>Flagged for Issues</option></select>
+        </div>
+        <div class="field"><label>Photos / attachments (optional)</label>
+          <input type="file" id="debrief-photos" accept="image/*" multiple>
+          <div class="cert-current" id="debrief-existing-photos"></div>
+        </div>
+      </div>
       <div class="field"><label>Notes</label><textarea id="debrief-notes" placeholder="How the day went, issues, follow-ups needed..."></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('debrief')">Cancel</button>
@@ -1187,12 +1219,15 @@
         const dateField = document.getElementById('debrief-date');
         if(dateField) dateField.value = new Date().toISOString().slice(0,10);
         debriefEditingJobIds = new Set();
+        debriefEditingPhotoUrls = [];
         const picker = document.getElementById('debrief-jobs-picker');
         if(picker) picker.innerHTML = `<div class="debrief-jobs-hint">Select a technician and date to see their dispatched jobs.</div>`;
         const countEl = document.getElementById('debrief-jobs-count');
         if(countEl) countEl.textContent = '';
         const manualWrap = document.getElementById('debrief-jobs-manual-wrap');
         if(manualWrap) manualWrap.style.display = 'none';
+        const existingWrap = document.getElementById('debrief-existing-photos');
+        if(existingWrap) existingWrap.innerHTML = '';
       }
       if(name === 'call'){
         const timeField = document.getElementById('call-time');
@@ -1593,6 +1628,8 @@ Cool Bros Heating & Air Conditioning`;
     });
   }
 
+  const debriefFilter = { preset: 'last7', from: null, to: null, search: '' };
+
   async function loadDebriefs(){
     const [debriefsRes, jobsRes] = await Promise.all([
       db.from('tech_debriefs').select('*').order('debrief_date', {ascending:false}),
@@ -1600,30 +1637,81 @@ Cool Bros Heating & Air Conditioning`;
     ]);
     rowCache.debriefs = debriefsRes.data || [];
     rowCache.debriefJobsLite = jobsRes.data || [];
-    renderDebriefs(rowCache.debriefs);
+
+    if(debriefFilter.preset === 'all'){
+      document.getElementById('debrief-range-label').textContent = 'All time';
+    } else if(debriefFilter.preset !== 'custom'){
+      const r = presetRange(debriefFilter.preset);
+      debriefFilter.from = r.from; debriefFilter.to = r.to;
+      document.getElementById('debrief-range-label').textContent = (PRESET_LABELS[debriefFilter.preset] || 'Range') + ' — ' + fmtDate(r.from) + ' to ' + fmtDate(r.to);
+    } else {
+      document.getElementById('debrief-range-label').textContent = 'Custom range — ' + fmtDate(debriefFilter.from) + ' to ' + fmtDate(debriefFilter.to);
+    }
+
+    applyDebriefFilters();
+    renderMissingDebriefs();
+  }
+
+  function setDebriefPreset(preset){
+    document.querySelectorAll('#debrief-presets .chip').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+    document.getElementById('debrief-custom-range').style.display = preset === 'custom' ? 'flex' : 'none';
+    debriefFilter.preset = preset;
+    if(preset === 'all'){
+      debriefFilter.from = null; debriefFilter.to = null;
+      document.getElementById('debrief-range-label').textContent = 'All time';
+      applyDebriefFilters();
+      return;
+    }
+    if(preset !== 'custom'){
+      const r = presetRange(preset);
+      debriefFilter.from = r.from; debriefFilter.to = r.to;
+      document.getElementById('debrief-range-label').textContent = (PRESET_LABELS[preset] || 'Range') + ' — ' + fmtDate(r.from) + ' to ' + fmtDate(r.to);
+      applyDebriefFilters();
+    }
+  }
+
+  function onDebriefCustomRangeChange(){
+    const from = document.getElementById('debrief-from').value;
+    const to = document.getElementById('debrief-to').value;
+    if(!from || !to) return;
+    debriefFilter.preset = 'custom';
+    debriefFilter.from = from; debriefFilter.to = to;
+    document.querySelectorAll('#debrief-presets .chip').forEach(b => b.classList.toggle('active', b.dataset.preset === 'custom'));
+    document.getElementById('debrief-range-label').textContent = 'Custom range — ' + fmtDate(from) + ' to ' + fmtDate(to);
+    applyDebriefFilters();
   }
 
   function filterDebriefs(){
-    const q = document.getElementById('debrief-search').value.trim().toLowerCase();
-    if(!q){ renderDebriefs(rowCache.debriefs); return; }
-    const idToJob = new Map((rowCache.debriefJobsLite||[]).map(j => [j.id, j]));
-    const filtered = (rowCache.debriefs || []).filter(row => {
-      const linkedNums = (Array.isArray(row.job_ids) ? row.job_ids : []).map(id => idToJob.get(id)?.job_number).filter(Boolean).join(' ');
-      const haystack = [row.technician, row.notes, linkedNums].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(q);
-    });
-    renderDebriefs(filtered);
+    debriefFilter.search = document.getElementById('debrief-search').value.trim().toLowerCase();
+    applyDebriefFilters();
   }
 
-  function clearDebriefSearch(){
-    document.getElementById('debrief-search').value = '';
-    renderDebriefs(rowCache.debriefs);
+  function applyDebriefFilters(){
+    let rows = rowCache.debriefs || [];
+    if(debriefFilter.from && debriefFilter.to){
+      rows = rows.filter(r => r.debrief_date && r.debrief_date >= debriefFilter.from && r.debrief_date <= debriefFilter.to);
+    }
+    if(debriefFilter.search){
+      const idToJob = new Map((rowCache.debriefJobsLite||[]).map(j => [j.id, j]));
+      const q = debriefFilter.search;
+      rows = rows.filter(row => {
+        const linkedNums = (Array.isArray(row.job_ids) ? row.job_ids : []).map(id => idToJob.get(id)?.job_number).filter(Boolean).join(' ');
+        const haystack = [row.technician, row.notes, linkedNums].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+    renderDebriefs(rows);
+  }
+
+  function debriefStatusPill(v){
+    const cls = {'Submitted':'paid','Needs Follow-up':'waiting','Flagged for Issues':'unpaid'}[v] || 'paid';
+    return pillSpan(v || 'Submitted', cls);
   }
 
   function renderDebriefs(data){
     clearRows('table-debriefs');
     if(!data || !data.length){
-      document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', `<tr><td colspan="7" style="text-align:center; color:var(--text-faint); padding:20px;">No matching debriefs found.</td></tr>`);
+      document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', `<tr><td colspan="8" style="text-align:center; color:var(--text-faint); padding:20px;">No matching debriefs found.</td></tr>`);
       return;
     }
     const jobsLite = rowCache.debriefJobsLite || [];
@@ -1640,10 +1728,58 @@ Cool Bros Heating & Air Conditioning`;
         ? ` <span class="pill unpaid" title="${missing} dispatched job(s) for this tech on this date aren't linked to this debrief">⚠ ${missing} unlinked</span>`
         : '';
       const jobsDoneDisplay = linkedIds.length ? linkedIds.length : (row.jobs_completed ?? '—');
-      const html = `<tr><td>${row.technician||'—'}</td><td class="mono">${row.debrief_date ? fmtDate(row.debrief_date) : '—'}</td><td>${jobsDoneDisplay}</td><td>${linkedHtml}${flagHtml}</td><td>${row.notes||'—'}</td><td>${pillSpan('Submitted','paid')}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
+      const photoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+      const photosHtml = photoUrls.length
+        ? photoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener" class="btn-icon" style="text-decoration:none;">📎 ${i+1}</a>`).join(' ')
+        : '<span style="color:var(--text-faint);">—</span>';
+      const html = `<tr><td>${row.technician||'—'}</td><td class="mono">${row.debrief_date ? fmtDate(row.debrief_date) : '—'}</td><td>${jobsDoneDisplay}</td><td>${linkedHtml}${flagHtml}</td><td>${debriefStatusPill(row.status)}</td><td>${photosHtml}</td><td>${row.notes||'—'}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
       document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', html);
     });
   }
+
+  function computeMissingDebriefs(){
+    const jobsLite = rowCache.debriefJobsLite || [];
+    const debriefs = rowCache.debriefs || [];
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0,10);
+    const cutoff = new Date(now.getTime() - 13*24*60*60*1000).toISOString().slice(0,10);
+    const pairCounts = new Map();
+    jobsLite.forEach(j => {
+      if(!j.technician || !j.scheduled_date) return;
+      if(j.scheduled_date < cutoff || j.scheduled_date > todayStr) return;
+      const key = j.technician + '|' + j.scheduled_date;
+      pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
+    });
+    const debriefKeys = new Set(debriefs.map(d => d.technician + '|' + d.debrief_date));
+    const missing = [];
+    pairCounts.forEach((count, key) => {
+      if(!debriefKeys.has(key)){
+        const idx = key.lastIndexOf('|');
+        missing.push({ tech: key.slice(0, idx), date: key.slice(idx+1), count });
+      }
+    });
+    missing.sort((a,b) => b.date.localeCompare(a.date));
+    return missing;
+  }
+
+  function renderMissingDebriefs(){
+    const missing = computeMissingDebriefs();
+    const wrap = document.getElementById('debrief-missing-wrap');
+    const table = document.getElementById('table-debriefs-missing');
+    if(!missing.length){ wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    table.innerHTML = '<tr><th>Tech</th><th>Date</th><th>Jobs dispatched</th><th>Actions</th></tr>' +
+      missing.map(m => `<tr><td>${m.tech}</td><td class="mono">${fmtDate(m.date)}</td><td>${m.count}</td><td><button class="btn-icon" onclick="quickAddDebrief('${m.tech.replace(/'/g,"\\'")}','${m.date}')">+ Add debrief</button></td></tr>`).join('');
+  }
+
+  function quickAddDebrief(tech, date){
+    openModal('debrief', true);
+    document.getElementById('debrief-tech-input').value = tech;
+    document.getElementById('debrief-date').value = date;
+    refreshDebriefJobPicker();
+  }
+
+
 
   // ---------- Debrief job picker (links a debrief to real dispatched jobs) ----------
   let debriefEditingJobIds = new Set();
@@ -1682,6 +1818,21 @@ Cool Bros Heating & Air Conditioning`;
     countEl.textContent = checked.length ? `${checked.length} job(s) linked to this debrief` : '';
   }
 
+  let debriefEditingPhotoUrls = [];
+
+  async function uploadDebriefPhotos(files){
+    const urls = [];
+    for(const file of files){
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `debriefs/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+      const { error } = await db.storage.from('debrief-photos').upload(path, file);
+      if(error) throw error;
+      const { data } = db.storage.from('debrief-photos').getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  }
+
   async function submitDebrief(e){
     e.preventDefault();
     const f = e.target;
@@ -1689,10 +1840,17 @@ Cool Bros Heating & Air Conditioning`;
     const jobs = document.getElementById('debrief-jobs');
     const date = document.getElementById('debrief-date');
     const notes = document.getElementById('debrief-notes');
+    const status = document.getElementById('debrief-status');
+    const photoInput = document.getElementById('debrief-photos');
     const checkedIds = Array.from(document.querySelectorAll('#debrief-jobs-picker input[type=checkbox]:checked')).map(cb => cb.value);
     const jobs_completed = checkedIds.length ? checkedIds.length : (parseInt(jobs.value) || 0);
     try{
-      const payload = { technician: tech.value, jobs_completed, job_ids: checkedIds, debrief_date: date.value, notes: notes.value || null };
+      let photo_urls = debriefEditingPhotoUrls;
+      if(photoInput.files && photoInput.files.length){
+        const uploaded = await uploadDebriefPhotos(Array.from(photoInput.files));
+        photo_urls = [...debriefEditingPhotoUrls, ...uploaded];
+      }
+      const payload = { technician: tech.value, jobs_completed, job_ids: checkedIds, debrief_date: date.value, notes: notes.value || null, status: status.value, photo_urls };
       let error;
       if(editState.debrief){
         ({ error } = await db.from('tech_debriefs').update(payload).eq('id', editState.debrief));
@@ -1701,10 +1859,13 @@ Cool Bros Heating & Air Conditioning`;
       }
       if(error){
         if(/job_ids/i.test(error.message||'')) throw new Error('Your Supabase database needs a job_ids column (uuid array) added to the tech_debriefs table. Run the migration, then save again.');
+        if(/status/i.test(error.message||'')) throw new Error('Your Supabase database needs a status column (text) added to the tech_debriefs table. Run the migration, then save again.');
+        if(/photo_urls/i.test(error.message||'')) throw new Error('Your Supabase database needs a photo_urls column (text array) added to the tech_debriefs table. Run the migration, then save again.');
         throw error;
       }
       editState.debrief = null;
       debriefEditingJobIds = new Set();
+      debriefEditingPhotoUrls = [];
       f.reset(); closeModal('debrief'); showToast('Debrief saved'); await loadDebriefs();
     } catch(err){ alert(err.message); }
     return false;
@@ -1715,10 +1876,16 @@ Cool Bros Heating & Air Conditioning`;
     if(!row) return;
     editState.debrief = id;
     debriefEditingJobIds = new Set(Array.isArray(row.job_ids) ? row.job_ids : []);
+    debriefEditingPhotoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
     document.getElementById('debrief-tech-input').value = row.technician || '';
     document.getElementById('debrief-jobs').value = row.jobs_completed ?? '';
     document.getElementById('debrief-date').value = row.debrief_date || '';
     document.getElementById('debrief-notes').value = row.notes || '';
+    document.getElementById('debrief-status').value = row.status || 'Submitted';
+    const existingWrap = document.getElementById('debrief-existing-photos');
+    existingWrap.innerHTML = debriefEditingPhotoUrls.length
+      ? 'Already attached: ' + debriefEditingPhotoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener">Photo ${i+1}</a>`).join(', ')
+      : '';
     refreshDebriefJobPicker();
     const h3 = document.querySelector('#modal-debrief .modal-head h3');
     if(h3) h3.textContent = 'Edit debrief';
@@ -1726,6 +1893,7 @@ Cool Bros Heating & Air Conditioning`;
     if(btn) btn.textContent = 'Save changes';
     openModal('debrief');
   }
+
 
   // ---------- CALL LOG CENTER ----------
   const callFilter = { preset: 'today', from: null, to: null, search: '', type: 'all' };
