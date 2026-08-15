@@ -692,6 +692,11 @@
           <button class="btn btn-primary" onclick="openModal('equipmentjb', true)">+ Add Equipment</button>
         </div>
       </div>
+      <div class="callfilter-bar">
+        <input type="text" id="eqjb-search" class="callfilter-search" style="margin-left:0; flex:1;" placeholder="Search name, phone, address, email, model no. or serial no…" oninput="filterEquipmentJb()">
+        <button type="button" class="btn" onclick="filterEquipmentJb()">Search</button>
+        <button type="button" class="btn" onclick="clearEquipmentJbSearch()">Clear</button>
+      </div>
       <div class="table-scroll">
         <table class="data" id="table-equipmentjb">
           <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Equipment warranty</th><th>JB warranty</th><th>Certificate</th><th>Actions</th></tr>
@@ -1792,11 +1797,39 @@ Cool Bros Heating & Air Conditioning`;
     }
     if(error){ console.error(error); return alert('Could not load Equipment & JB Warranty records. Please run the Supabase migration included with this build.'); }
     rowCache.equipmentjb = data || [];
+    renderEquipmentJb(rowCache.equipmentjb);
+  }
+
+  function filterEquipmentJb(){
+    const q = document.getElementById('eqjb-search').value.trim().toLowerCase();
+    if(!q){ renderEquipmentJb(rowCache.equipmentjb); return; }
+    const filtered = (rowCache.equipmentjb || []).filter(row => {
+      const c = row.customers || {};
+      const haystack = [
+        c.first_name, c.last_name, c.phone, c.address, c.email, row.model, row.serial
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+    renderEquipmentJb(filtered, { forceOpen: true });
+  }
+
+  function clearEquipmentJbSearch(){
+    document.getElementById('eqjb-search').value = '';
+    renderEquipmentJb(rowCache.equipmentjb);
+  }
+
+  function renderEquipmentJb(data, opts){
+    const forceOpen = !!(opts && opts.forceOpen);
     clearRows('table-equipmentjb');
+
+    if(!data || !data.length){
+      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', `<tr><td colspan="10" style="text-align:center; color:var(--text-faint); padding:20px;">No matching equipment or clients found.</td></tr>`);
+      return;
+    }
 
     // group equipment records by client so each client can be collapsed/expanded
     const groups = new Map();
-    (data||[]).forEach(row => {
+    data.forEach(row => {
       const key = row.customer_id || custName(row);
       if(!groups.has(key)) groups.set(key, []);
       groups.get(key).push(row);
@@ -1816,7 +1849,7 @@ Cool Bros Heating & Air Conditioning`;
         address: first.customers?.address || ''
       };
       const activeCount = rows.filter(r => ['Active','Registered'].includes(r.jb_warranty_status)).length;
-      const isOpen = eqjbOpenGroups.has(gid);
+      const isOpen = forceOpen || eqjbOpenGroups.has(gid);
 
       const headerHtml = `<tr class="eqjb-group-row" data-gid="${gid}" onclick="toggleEquipmentJbGroup('${gid}')">
         <td colspan="10">
