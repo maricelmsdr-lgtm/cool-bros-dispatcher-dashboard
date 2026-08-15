@@ -816,7 +816,7 @@
   <div class="modal">
     <div class="modal-head"><h3 data-add-label="Log installation">Log installation</h3><button class="modal-close" onclick="closeModal('install')">&times;</button></div>
     <form onsubmit="return submitInstall(event)">
-      <div class="field"><label>Customer name</label><input type="text" id="install-customer" required></div>
+      <div class="field-row"><div class="field"><label>Customer name</label><input type="text" id="install-customer" required></div><div class="field"><label>Client email</label><input type="email" id="install-email" placeholder="client@example.com"></div></div>
       <div id="equipment-rows">
         <div class="equipment-row field-row">
           <div class="field"><label>Equipment</label><input type="text" class="eq-equipment" placeholder="e.g. Split-type AC unit" required></div>
@@ -1005,7 +1005,7 @@
   <div class="modal">
     <div class="modal-head"><h3 data-add-label="Add JB warranty client">Add JB warranty client</h3><button class="modal-close" onclick="closeModal('jbwarranty')">&times;</button></div>
     <form onsubmit="return submitJbwarranty(event)">
-      <div class="field"><label>Customer name</label><input type="text" id="jbwarranty-customer" required></div>
+      <div class="field-row"><div class="field"><label>Customer name</label><input type="text" id="jbwarranty-customer" required></div><div class="field"><label>Client email</label><input type="email" id="jbwarranty-email" placeholder="client@example.com"></div></div>
       <div id="jbwarranty-equipment-rows">
         <div class="equipment-row field-row">
           <div class="field"><label>Equipment</label><input type="text" class="jbw-equipment" required></div>
@@ -1182,6 +1182,12 @@
     return [row.customers.first_name, row.customers.last_name].filter(Boolean).join(' ') || '—';
   }
 
+  document.addEventListener('DOMContentLoaded', () => {
+    wireWarrantyLookup();
+    document.getElementById('modal-install')?.addEventListener('click', () => setTimeout(wireWarrantyLookup, 0));
+    document.getElementById('modal-jbwarranty')?.addEventListener('click', () => setTimeout(wireWarrantyLookup, 0));
+  });
+
   // ---------- AUTH ----------
   function toggleAuthMode(){
     authMode = authMode === 'login' ? 'signup' : 'login';
@@ -1283,16 +1289,82 @@
   }
 
   // ---------- CUSTOMER LOOKUP / CREATE ----------
-  async function findOrCreateCustomer(fullName){
-    const parts = fullName.trim().split(/\s+/);
+  async function findOrCreateCustomer(fullName, email=''){
+    const normalizedName = fullName.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const parts = normalizedName.split(/\s+/);
     const last_name = parts.length > 1 ? parts.pop() : '';
-    const first_name = parts.join(' ') || fullName.trim();
-    const { data: existing } = await db.from('customers').select('id, first_name, last_name');
-    const match = (existing || []).find(c => `${c.first_name || ''} ${c.last_name || ''}`.trim() === fullName.trim());
-    if(match) return match.id;
-    const { data: created, error } = await db.from('customers').insert({ first_name, last_name }).select('id').single();
+    const first_name = parts.join(' ') || normalizedName;
+    const { data: existing, error: lookupError } = await db.from('customers').select('id, first_name, last_name, email');
+    if(lookupError) throw lookupError;
+    const match = (existing || []).find(c => `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase() === normalizedName.toLowerCase());
+    if(match){
+      if(normalizedEmail && (match.email || '').trim().toLowerCase() !== normalizedEmail){
+        const { error } = await db.from('customers').update({ email: normalizedEmail }).eq('id', match.id);
+        if(error) throw error;
+      }
+      return match.id;
+    }
+    const { data: created, error } = await db.from('customers').insert({ first_name, last_name, email: normalizedEmail || null }).select('id').single();
     if(error) throw error;
     return created.id;
+  }
+
+  async function lookupLinkedWarranty(field, value, source){
+    const q = (value || '').trim();
+    if(!q || q.length < 3) return;
+    const column = field === 'serial' ? 'serial' : 'model';
+    try{
+      const [instRes, jbRes] = await Promise.all([
+        db.from('installations').select('id,customer_id,equipment,model,serial,install_date,registration_date,certificate_url,customers(first_name,last_name,email)').ilike(column, q).limit(5),
+        db.from('jb_warranty_clients').select('id,customer_id,equipment,model,serial,warranty_start_year,warranty_length_years,certificate_url,customers(first_name,last_name,email)').ilike(column, q).limit(5)
+      ]);
+      const found = [...(instRes.data || []), ...(jbRes.data || [])].find(r => {
+        const v = String(r[column] || '').trim().toLowerCase();
+        return v === q.toLowerCase();
+      });
+      if(!found) return;
+      const c = found.customers || {};
+      if(source === 'install'){
+        document.getElementById('install-customer').value = [c.first_name,c.last_name].filter(Boolean).join(' ') || document.getElementById('install-customer').value;
+        document.getElementById('install-email').value = c.email || '';
+        document.querySelector('#equipment-rows .eq-equipment').value = found.equipment || '';
+        document.querySelector('#equipment-rows .eq-model').value = found.model || '';
+        document.querySelector('#equipment-rows .eq-serial').value = found.serial || '';
+      } else {
+        document.getElementById('jbwarranty-customer').value = [c.first_name,c.last_name].filter(Boolean).join(' ') || document.getElementById('jbwarranty-customer').value;
+        document.getElementById('jbwarranty-email').value = c.email || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-equipment').value = found.equipment || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-model').value = found.model || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-serial').value = found.serial || '';
+        if(found.warranty_start_year) document.getElementById('jbwarranty-startyear').value = found.warranty_start_year;
+        if(found.warranty_length_years) document.getElementById('jbwarranty-length').value = found.warranty_length_years;
+      }
+      showToast(`Linked ${source === 'install' ? 'JB / warranty' : 'installation'} record found`);
+    }catch(err){ console.warn('Warranty lookup failed:', err); }
+  }
+
+  function wireWarrantyLookup(){
+    const installSerial = document.querySelector('#equipment-rows .eq-serial');
+    const installModel = document.querySelector('#equipment-rows .eq-model');
+    const jbSerial = document.querySelector('#jbwarranty-equipment-rows .jbw-serial');
+    const jbModel = document.querySelector('#jbwarranty-equipment-rows .jbw-model');
+    if(installSerial && !installSerial.dataset.linked){ installSerial.dataset.linked='1'; installSerial.addEventListener('blur',()=>lookupLinkedWarranty('serial',installSerial.value,'install')); }
+    if(installModel && !installModel.dataset.linked){ installModel.dataset.linked='1'; installModel.addEventListener('blur',()=>lookupLinkedWarranty('model',installModel.value,'install')); }
+    if(jbSerial && !jbSerial.dataset.linked){ jbSerial.dataset.linked='1'; jbSerial.addEventListener('blur',()=>lookupLinkedWarranty('serial',jbSerial.value,'jb')); }
+    if(jbModel && !jbModel.dataset.linked){ jbModel.dataset.linked='1'; jbModel.addEventListener('blur',()=>lookupLinkedWarranty('model',jbModel.value,'jb')); }
+  }
+
+  function sendWarrantyDocument(type, id){
+    const collection = type === 'installation' ? rowCache.installs : rowCache.jbwarranty;
+    const row = (collection || []).find(r => String(r.id) === String(id));
+    if(!row || !row.certificate_url) return alert('No warranty certificate is attached to this record.');
+    const email = row.customers && row.customers.email ? row.customers.email.trim() : '';
+    if(!email) return alert('This customer does not have an email address. Edit the warranty record and add the client email first.');
+    const customerName = custName(row) === '—' ? 'Customer' : custName(row);
+    const subject = type === 'installation' ? 'Cool Bros — Installation Warranty Certificate' : 'Cool Bros — JB Warranty Certificate';
+    const body = `Hi ${customerName},%0D%0A%0D%0AThank you for choosing Cool Bros Heating & Air Conditioning.%0D%0A%0D%0APlease find your warranty certificate here:%0D%0A${row.certificate_url}%0D%0A%0D%0APlease keep this document for your records. If you have any questions, please contact us.%0D%0A%0D%0AThank you,%0D%0ACool Bros Heating & Air Conditioning`;
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${body}`;
   }
 
   // ---------- LOAD DATA INTO TABLES ----------
@@ -1395,7 +1467,7 @@
   }
 
   async function loadDispatch(){
-    const { data } = await db.from('jobs').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('jobs').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.jobs = data || [];
     clearRows('table-dispatch');
     (data||[]).forEach(row => {
@@ -1640,7 +1712,7 @@
   }
 
   async function loadCallbacks(){
-    const { data } = await db.from('callbacks').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('callbacks').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.callbacks = data || [];
     clearRows('table-callbacks');
     (data||[]).forEach(row => {
@@ -1651,18 +1723,19 @@
   }
 
   async function loadInstalls(){
-    const { data } = await db.from('installations').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('installations').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.installs = data || [];
     clearRows('table-installs');
     (data||[]).forEach(row => {
       const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
-      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td class="mono">${fmtDate(row.registration_date)}</td><td>${cert}</td><td><button class="btn-icon" onclick="editInstall('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadInstalls)">Delete</button></td></tr>`;
+      const send = row.certificate_url ? `<button class="btn-icon" onclick="sendWarrantyDocument('installation','${row.id}')">Send</button>` : '';
+      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td class="mono">${fmtDate(row.registration_date)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editInstall('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadInstalls)">Delete</button></td></tr>`;
       document.getElementById('table-installs').insertAdjacentHTML('beforeend', html);
     });
   }
 
   async function loadWarranty(){
-    const { data } = await db.from('warranty_claims').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('warranty_claims').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.warranty = data || [];
     clearRows('table-warranty');
     (data||[]).forEach(row => {
@@ -1673,20 +1746,21 @@
   }
 
   async function loadJbwarranty(){
-    const { data } = await db.from('jb_warranty_clients').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('jb_warranty_clients').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.jbwarranty = data || [];
     clearRows('table-jbwarranty');
     (data||[]).forEach(row => {
       const active = (row.warranty_start_year + row.warranty_length_years) > new Date().getFullYear();
       const statusHtml = active ? pillSpan('Active','paid') : pillSpan('Expired','unpaid');
       const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
-      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td>${row.model||'—'}</td><td>${row.serial||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td><td>${cert}</td><td><button class="btn-icon" onclick="editJbwarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jb_warranty_clients','${row.id}',loadJbwarranty)">Delete</button></td></tr>`;
+      const send = row.certificate_url ? `<button class="btn-icon" onclick="sendWarrantyDocument('jb','${row.id}')">Send</button>` : '';
+      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td>${row.model||'—'}</td><td>${row.serial||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editJbwarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jb_warranty_clients','${row.id}',loadJbwarranty)">Delete</button></td></tr>`;
       document.getElementById('table-jbwarranty').insertAdjacentHTML('beforeend', html);
     });
   }
 
   async function loadServiceplans(){
-    const { data } = await db.from('service_plans').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('service_plans').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.serviceplans = data || [];
     clearRows('table-serviceplans');
     (data||[]).forEach(row => {
@@ -1696,7 +1770,7 @@
   }
 
   async function loadInvoices(){
-    const { data } = await db.from('invoices').select('*, customers(first_name,last_name)').order('created_at', {ascending:false});
+    const { data } = await db.from('invoices').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.invoices = data || [];
     clearRows('table-invoices');
     (data||[]).forEach(row => {
@@ -1820,7 +1894,7 @@
     const regDate = document.getElementById('install-regdate');
     const equipmentRows = f.querySelectorAll('.equipment-row');
     try{
-      const customer_id = await findOrCreateCustomer(customer.value);
+      const customer_id = await findOrCreateCustomer(customer.value, document.getElementById('install-email').value);
       if(editState.install){
         const row = equipmentRows[0];
         const file = row.querySelector('.eq-certificate').files[0];
@@ -1861,6 +1935,7 @@
     editState.install = id;
     document.getElementById('equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
     document.getElementById('install-customer').value = custName(row);
+    document.getElementById('install-email').value = (row.customers && row.customers.email) || '';
     document.querySelector('.eq-equipment').value = row.equipment || '';
     document.querySelector('.eq-model').value = row.model || '';
     document.querySelector('.eq-serial').value = row.serial || '';
@@ -1873,6 +1948,7 @@
     const btn = document.querySelector('#modal-install button[type=submit]');
     if(btn) btn.textContent = 'Save changes';
     openModal('install');
+    setTimeout(wireWarrantyLookup, 0);
   }
 
   async function submitWarranty(e){
@@ -2112,6 +2188,7 @@
       <button type="button" class="btn" onclick="this.parentElement.remove()" style="align-self:center;">Remove</button>
     `;
     rows.appendChild(row);
+    wireWarrantyLookup();
   }
 
   async function submitJbwarranty(e){
@@ -2122,7 +2199,7 @@
     const length = document.getElementById('jbwarranty-length');
     const equipmentRows = f.querySelectorAll('.equipment-row');
     try{
-      const customer_id = await findOrCreateCustomer(customer.value);
+      const customer_id = await findOrCreateCustomer(customer.value, document.getElementById('jbwarranty-email').value);
       if(editState.jbwarranty){
         const row = equipmentRows[0];
         const file = row.querySelector('.jbw-certificate').files[0];
@@ -2168,6 +2245,7 @@
     editState.jbwarranty = id;
     document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
     document.getElementById('jbwarranty-customer').value = custName(row);
+    document.getElementById('jbwarranty-email').value = (row.customers && row.customers.email) || '';
     document.querySelector('.jbw-equipment').value = row.equipment || '';
     document.querySelector('.jbw-model').value = row.model || '';
     document.querySelector('.jbw-serial').value = row.serial || '';
@@ -2180,6 +2258,7 @@
     const btn = document.querySelector('#modal-jbwarranty button[type=submit]');
     if(btn) btn.textContent = 'Save changes';
     openModal('jbwarranty');
+    setTimeout(wireWarrantyLookup, 0);
   }
 
   async function submitServiceplan(e){
