@@ -304,6 +304,23 @@
   table.data tr:hover td{background:var(--panel-2);}
   .mono{font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:12.5px;}
 
+  .eqjb-group-row td{
+    cursor:pointer; background:var(--panel-2);
+    font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:15px;
+    letter-spacing:0.2px;
+  }
+  .eqjb-group-row:hover td{background:var(--line-soft);}
+  .eqjb-group-toggle{
+    display:inline-block; width:14px; color:var(--cyan); font-size:11px;
+    transition:transform .12s;
+  }
+  .eqjb-group-meta{
+    color:var(--text-faint); font-weight:400; font-size:12px;
+    font-family:'Inter',sans-serif; margin-left:10px;
+  }
+  .eqjb-detail-row{display:none;}
+  .eqjb-detail-row td:first-child{padding-left:30px; color:var(--text-dim);}
+
   .view{display:none;}
   .view.active{display:block;}
 
@@ -668,7 +685,7 @@
     <!-- ============ EQUIPMENT & JB WARRANTY ============ -->
     <div class="view" id="view-equipmentjb">
       <div class="module-head">
-        <div><h2>Equipment &amp; JB Warranty Registration</h2><div class="module-sub">One equipment record for the customer, equipment, installation and JB warranty registration</div></div>
+        <div><h2>Equipment &amp; JB Warranty Registration</h2><div class="module-sub">Click a client's name to view all their equipment &amp; warranty records</div></div>
         <div style="display:flex; gap:8px;">
           <button class="btn" onclick="downloadTableCSV('table-equipmentjb','equipment_jb_warranty_backup.csv')">⬇ CSV</button>
           <button class="btn" onclick="downloadTablePDF('table-equipmentjb','equipment_jb_warranty_backup.pdf','Equipment & JB Warranty Registration')">⬇ PDF</button>
@@ -786,7 +803,9 @@
   <div class="modal" style="max-width:760px;">
     <div class="modal-head"><h3 data-add-label="Add Equipment & JB Warranty Registration">Add Equipment &amp; JB Warranty Registration</h3><button class="modal-close" onclick="closeModal('equipmentjb')">&times;</button></div>
     <form onsubmit="return submitEquipmentJb(event)">
-      <div class="field-row"><div class="field"><label>Customer name</label><input type="text" id="eqjb-customer" required></div><div class="field"><label>Client email</label><input type="email" id="eqjb-email" placeholder="client@example.com"></div></div>
+      <div class="field-row"><div class="field"><label>First name</label><input type="text" id="eqjb-first-name" required></div><div class="field"><label>Last name</label><input type="text" id="eqjb-last-name" required></div></div>
+      <div class="field-row"><div class="field"><label>Contact number</label><input type="tel" id="eqjb-phone" placeholder="(555) 123-4567"></div><div class="field"><label>Client email</label><input type="email" id="eqjb-email" placeholder="client@example.com"></div></div>
+      <div class="field"><label>Address</label><input type="text" id="eqjb-address" placeholder="Street, City, State"></div>
       <div class="field-row">
         <div class="field"><label>Brand</label><select id="eqjb-brand" required><option value="">Choose brand</option><option>Mitsubishi</option><option>Daikin</option><option>American Standard</option><option>Amana</option><option>Fujitsu</option><option>Rheem</option><option>Other</option></select></div>
         <div class="field"><label>Equipment type</label><input type="text" id="eqjb-equipment" placeholder="e.g. Mini Split, Central AC" required></div>
@@ -1267,7 +1286,7 @@
   }
 
   // ---------- CUSTOMER LOOKUP / CREATE ----------
-  async function findOrCreateCustomer(fullName, email=''){
+  async function findOrCreateCustomer(fullName, email='', extra={}){
     const normalizedName = fullName.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const parts = normalizedName.split(/\s+/);
@@ -1276,16 +1295,30 @@
     const { data: existing, error: lookupError } = await db.from('customers').select('id, first_name, last_name, email');
     if(lookupError) throw lookupError;
     const match = (existing || []).find(c => `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase() === normalizedName.toLowerCase());
+    let customerId;
     if(match){
       if(normalizedEmail && (match.email || '').trim().toLowerCase() !== normalizedEmail){
         const { error } = await db.from('customers').update({ email: normalizedEmail }).eq('id', match.id);
         if(error) throw error;
       }
-      return match.id;
+      customerId = match.id;
+    } else {
+      const { data: created, error } = await db.from('customers').insert({ first_name, last_name, email: normalizedEmail || null }).select('id').single();
+      if(error) throw error;
+      customerId = created.id;
     }
-    const { data: created, error } = await db.from('customers').insert({ first_name, last_name, email: normalizedEmail || null }).select('id').single();
-    if(error) throw error;
-    return created.id;
+    if(extra.phone || extra.address){
+      try{
+        const patch = {};
+        if(extra.phone) patch.phone = extra.phone;
+        if(extra.address) patch.address = extra.address;
+        const { error } = await db.from('customers').update(patch).eq('id', customerId);
+        if(error) throw error;
+      } catch(err){
+        console.warn('Could not save phone/address — add "phone" and "address" columns to the customers table in Supabase.', err.message);
+      }
+    }
+    return customerId;
   }
 
   async function lookupLinkedWarranty(field, value, source){
@@ -1744,19 +1777,80 @@ Cool Bros Heating & Air Conditioning`;
     });
   }
 
+  const eqjbGroupMeta = {};
+  const eqjbOpenGroups = new Set(); // gids currently expanded, preserved across reloads
+
   async function loadEquipmentJb(){
-    const { data, error } = await db.from('installations').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
+    let { data, error } = await db.from('installations').select('*, customers(first_name,last_name,email,phone,address)').order('created_at', {ascending:false});
+    if(error){
+      // customers.phone / customers.address may not exist yet — fall back until the migration is run
+      ({ data, error } = await db.from('installations').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false}));
+    }
     if(error){ console.error(error); return alert('Could not load Equipment & JB Warranty records. Please run the Supabase migration included with this build.'); }
     rowCache.equipmentjb = data || [];
     clearRows('table-equipmentjb');
+
+    // group equipment records by client so each client can be collapsed/expanded
+    const groups = new Map();
     (data||[]).forEach(row => {
-      const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
-      const send = row.certificate_url ? `<button class="btn-icon" onclick="sendEquipmentJbDocument('${row.id}')">Send</button>` : '';
-      const jb = row.jb_warranty_status || '—';
-      const jbCls = ['Active','Registered'].includes(jb) ? 'paid' : (jb === 'Expired' ? 'unpaid' : 'pending');
-      const html = `<tr><td>${custName(row)}</td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
-      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', html);
+      const key = row.customer_id || custName(row);
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
     });
+
+    let i = 0;
+    groups.forEach(rows => {
+      i++;
+      const gid = `eqjb-g${i}`;
+      const first = rows[0];
+      const name = custName(first);
+      eqjbGroupMeta[gid] = {
+        first_name: first.customers?.first_name || '',
+        last_name: first.customers?.last_name || '',
+        email: first.customers?.email || '',
+        phone: first.customers?.phone || '',
+        address: first.customers?.address || ''
+      };
+      const activeCount = rows.filter(r => ['Active','Registered'].includes(r.jb_warranty_status)).length;
+      const isOpen = eqjbOpenGroups.has(gid);
+
+      const headerHtml = `<tr class="eqjb-group-row" data-gid="${gid}" onclick="toggleEquipmentJbGroup('${gid}')">
+        <td colspan="9">
+          <span class="eqjb-group-toggle" id="${gid}-arrow">${isOpen ? '▾' : '▸'}</span>${name}<span class="eqjb-group-meta">${rows.length} equipment${rows.length>1?'s':''} · ${activeCount} active/registered JB warranty</span>
+          <button class="btn-icon" style="float:right;" onclick="event.stopPropagation(); addEquipmentForCustomer('${gid}')">+ Add equipment</button>
+        </td>
+      </tr>`;
+      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', headerHtml);
+
+      rows.forEach(row => {
+        const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
+        const send = row.certificate_url ? `<button class="btn-icon" onclick="sendEquipmentJbDocument('${row.id}')">Send</button>` : '';
+        const jb = row.jb_warranty_status || '—';
+        const jbCls = ['Active','Registered'].includes(jb) ? 'paid' : (jb === 'Expired' ? 'unpaid' : 'pending');
+        const html = `<tr class="eqjb-detail-row ${gid}-detail" style="${isOpen ? 'display:table-row;' : ''}"><td></td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
+        document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', html);
+      });
+    });
+  }
+
+  function toggleEquipmentJbGroup(gid){
+    const rows = document.querySelectorAll(`.${gid}-detail`);
+    const arrow = document.getElementById(`${gid}-arrow`);
+    const willOpen = !eqjbOpenGroups.has(gid);
+    rows.forEach(r => r.style.display = willOpen ? 'table-row' : 'none');
+    if(arrow) arrow.textContent = willOpen ? '▾' : '▸';
+    if(willOpen) eqjbOpenGroups.add(gid); else eqjbOpenGroups.delete(gid);
+  }
+
+  function addEquipmentForCustomer(gid){
+    const meta = eqjbGroupMeta[gid];
+    if(!meta) return;
+    openModal('equipmentjb', true);
+    document.getElementById('eqjb-first-name').value = meta.first_name || '';
+    document.getElementById('eqjb-last-name').value = meta.last_name || '';
+    document.getElementById('eqjb-email').value = meta.email || '';
+    document.getElementById('eqjb-phone').value = meta.phone || '';
+    document.getElementById('eqjb-address').value = meta.address || '';
   }
 
   async function loadWarranty(){
@@ -1915,7 +2009,12 @@ Cool Bros Heating & Air Conditioning`;
     e.preventDefault();
     const f = e.target;
     try{
-      const customer_id = await findOrCreateCustomer(document.getElementById('eqjb-customer').value, document.getElementById('eqjb-email').value);
+      const firstName = document.getElementById('eqjb-first-name').value.trim();
+      const lastName = document.getElementById('eqjb-last-name').value.trim();
+      const fullName = [firstName, lastName].filter(Boolean).join(' ');
+      const phone = document.getElementById('eqjb-phone').value.trim();
+      const address = document.getElementById('eqjb-address').value.trim();
+      const customer_id = await findOrCreateCustomer(fullName, document.getElementById('eqjb-email').value, { phone, address });
       const file = document.getElementById('eqjb-certificate').files[0];
       const payload = {
         customer_id,
@@ -1948,8 +2047,11 @@ Cool Bros Heating & Air Conditioning`;
     const row = findCached('equipmentjb', id);
     if(!row) return;
     editState.equipmentjb = id;
-    document.getElementById('eqjb-customer').value = custName(row);
+    document.getElementById('eqjb-first-name').value = row.customers?.first_name || '';
+    document.getElementById('eqjb-last-name').value = row.customers?.last_name || '';
     document.getElementById('eqjb-email').value = row.customers?.email || '';
+    document.getElementById('eqjb-phone').value = row.customers?.phone || '';
+    document.getElementById('eqjb-address').value = row.customers?.address || '';
     document.getElementById('eqjb-brand').value = row.brand || 'Other';
     document.getElementById('eqjb-equipment').value = row.equipment || '';
     document.getElementById('eqjb-model').value = row.model || '';
