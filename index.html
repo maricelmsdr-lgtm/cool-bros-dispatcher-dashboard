@@ -563,7 +563,7 @@
       </div>
       <div class="table-scroll">
 <table class="data" id="table-dispatch">
-        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Scheduled</th><th>Invoice due</th><th>Invoice status</th><th>Status</th><th>Actions</th></tr>
+        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Scheduled</th><th>Invoice amount</th><th>Invoice status</th><th>Status</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -578,9 +578,14 @@
           <button class="btn btn-primary" onclick="openModal('debrief', true)">+ Add debrief</button>
         </div>
       </div>
+      <div class="callfilter-bar">
+        <input type="text" id="debrief-search" class="callfilter-search" style="margin-left:0; flex:1;" placeholder="Search technician or notes…" oninput="filterDebriefs()">
+        <button type="button" class="btn" onclick="filterDebriefs()">Search</button>
+        <button type="button" class="btn" onclick="clearDebriefSearch()">Clear</button>
+      </div>
       <div class="table-scroll">
 <table class="data" id="table-debriefs">
-        <tr><th>Tech</th><th>Jobs done</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
+        <tr><th>Tech</th><th>Date</th><th>Jobs done</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -887,9 +892,9 @@
         <div class="field"><label>Scheduled date</label><input type="date" id="dispatch-scheduled-date" required></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Invoice due</label><input type="date" id="dispatch-invoice-due"></div>
+        <div class="field"><label>Invoice amount ($)</label><input type="number" step="0.01" min="0" placeholder="0.00" id="dispatch-invoice-amount"></div>
         <div class="field"><label>Invoice status</label>
-          <select id="dispatch-invoice-status"><option>Not Invoiced</option><option>Unpaid</option><option>For Follow-up</option><option>Paid</option></select>
+          <select id="dispatch-invoice-status"><option>Not Invoiced</option><option>Unpaid</option><option>For Follow-up</option><option>Paid</option><option>No Charge</option></select>
         </div>
       </div>
       <div class="field-row">
@@ -1475,7 +1480,7 @@ Cool Bros Heating & Air Conditioning`;
     return pillSpan(v || '—', cls);
   }
   function invoiceStatusPill(v){
-    const cls = {'Paid':'paid','Unpaid':'unpaid','For Follow-up':'waiting','Not Invoiced':'scheduled'}[v] || 'scheduled';
+    const cls = {'Paid':'paid','Unpaid':'unpaid','For Follow-up':'waiting','Not Invoiced':'scheduled','No Charge':'completed'}[v] || 'scheduled';
     return pillSpan(v || 'Not Invoiced', cls);
   }
 
@@ -1548,7 +1553,7 @@ Cool Bros Heating & Air Conditioning`;
     rowCache.jobs = data || [];
     clearRows('table-dispatch');
     (data||[]).forEach(row => {
-      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}</td><td class="mono">${row.invoice_due_date ? fmtDate(row.invoice_due_date) : '—'}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
+      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}</td><td class="mono">${row.invoice_amount != null ? '$'+Number(row.invoice_amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
       document.getElementById('table-dispatch').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -1556,9 +1561,32 @@ Cool Bros Heating & Air Conditioning`;
   async function loadDebriefs(){
     const { data } = await db.from('tech_debriefs').select('*').order('debrief_date', {ascending:false});
     rowCache.debriefs = data || [];
+    renderDebriefs(rowCache.debriefs);
+  }
+
+  function filterDebriefs(){
+    const q = document.getElementById('debrief-search').value.trim().toLowerCase();
+    if(!q){ renderDebriefs(rowCache.debriefs); return; }
+    const filtered = (rowCache.debriefs || []).filter(row => {
+      const haystack = [row.technician, row.notes].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+    renderDebriefs(filtered);
+  }
+
+  function clearDebriefSearch(){
+    document.getElementById('debrief-search').value = '';
+    renderDebriefs(rowCache.debriefs);
+  }
+
+  function renderDebriefs(data){
     clearRows('table-debriefs');
-    (data||[]).forEach(row => {
-      const html = `<tr><td>${row.technician||'—'}</td><td>${row.jobs_completed ?? '—'}</td><td>${row.notes||'—'}</td><td>${pillSpan('Submitted','paid')}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
+    if(!data || !data.length){
+      document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', `<tr><td colspan="6" style="text-align:center; color:var(--text-faint); padding:20px;">No matching debriefs found.</td></tr>`);
+      return;
+    }
+    data.forEach(row => {
+      const html = `<tr><td>${row.technician||'—'}</td><td class="mono">${row.debrief_date ? fmtDate(row.debrief_date) : '—'}</td><td>${row.jobs_completed ?? '—'}</td><td>${row.notes||'—'}</td><td>${pillSpan('Submitted','paid')}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
       document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -2187,11 +2215,12 @@ Cool Bros Heating & Air Conditioning`;
     const scheduled_date = document.getElementById('dispatch-scheduled-date').value || new Date().toISOString().slice(0,10);
     const schedule_confidence = document.getElementById('dispatch-confidence').value;
     const job_number = document.getElementById('dispatch-job-number').value;
-    const invoice_due_date = document.getElementById('dispatch-invoice-due').value;
+    const invoice_amount_raw = document.getElementById('dispatch-invoice-amount').value;
+    const invoice_amount = invoice_amount_raw !== '' ? parseFloat(invoice_amount_raw) : null;
     const invoice_status = document.getElementById('dispatch-invoice-status').value;
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, schedule_confidence, description: description.value || null, invoice_due_date: invoice_due_date || null, invoice_status };
+      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, schedule_confidence, description: description.value || null, invoice_amount, invoice_status };
       if(job_number) payload.job_number = parseInt(job_number);
       let error;
       if(editState.dispatch){
@@ -2200,7 +2229,7 @@ Cool Bros Heating & Air Conditioning`;
         ({ error } = await db.from('jobs').insert(payload));
       }
       if(error){
-        if(/invoice_due|invoice_status/i.test(error.message||'')) throw new Error('Your Supabase database needs invoice_due_date / invoice_status columns added to the jobs table. Run the migration, then save again.');
+        if(/invoice_amount|invoice_status/i.test(error.message||'')) throw new Error('Your Supabase database needs invoice_amount / invoice_status columns added to the jobs table. Run the migration, then save again.');
         throw error;
       }
       editState.dispatch = null;
@@ -2221,7 +2250,7 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('dispatch-scheduled-date').value = row.scheduled_date || new Date().toISOString().slice(0,10);
     document.getElementById('dispatch-confidence').value = row.schedule_confidence || 'Firm';
     document.getElementById('dispatch-job-number').value = row.job_number || '';
-    document.getElementById('dispatch-invoice-due').value = row.invoice_due_date || '';
+    document.getElementById('dispatch-invoice-amount').value = row.invoice_amount ?? '';
     document.getElementById('dispatch-invoice-status').value = row.invoice_status || 'Not Invoiced';
     const h3 = document.querySelector('#modal-dispatch .modal-head h3');
     if(h3) h3.textContent = 'Edit job';
