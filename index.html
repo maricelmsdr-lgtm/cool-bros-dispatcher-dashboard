@@ -382,6 +382,24 @@
     .callfilter-search{margin-left:0; width:100%;}
   }
 
+  .debrief-jobs-picker{
+    max-height:180px; overflow-y:auto;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:7px;
+    padding:6px;
+  }
+  .debrief-jobs-hint{
+    color:var(--text-faint); font-size:12px; padding:8px 6px;
+  }
+  .debrief-job-row{
+    display:flex; align-items:center; gap:8px;
+    padding:7px 6px; border-radius:6px; font-size:12.5px; color:var(--text);
+  }
+  .debrief-job-row:hover{background:rgba(255,255,255,0.03);}
+  .debrief-job-row input[type=checkbox]{ accent-color:var(--cyan); width:15px; height:15px; flex:none; }
+  .debrief-job-row .djr-cust{color:var(--text-dim);}
+  .debrief-job-row .djr-num{font-family:'JetBrains Mono',monospace; color:var(--cyan);}
+  .debrief-jobs-count{color:var(--text-faint); font-size:11.5px; margin-top:6px;}
+
   /* ---------- MODAL / ENTRY FORMS ---------- */
   .modal-backdrop{
     display:none;
@@ -585,7 +603,7 @@
       </div>
       <div class="table-scroll">
 <table class="data" id="table-debriefs">
-        <tr><th>Tech</th><th>Date</th><th>Jobs done</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
+        <tr><th>Tech</th><th>Date</th><th>Jobs done</th><th>Linked jobs</th><th>Notes</th><th>Submitted</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -918,12 +936,22 @@
   <div class="modal">
     <div class="modal-head"><h3 data-add-label="Add debrief">Add debrief</h3><button class="modal-close" onclick="closeModal('debrief')">&times;</button></div>
     <form onsubmit="return submitDebrief(event)">
-      <div class="field"><label>Technician</label>
-        <input type="text" id="debrief-tech-input" list="tech-list" placeholder="Type or select technician" required>
-      </div>
       <div class="field-row">
-        <div class="field"><label>Jobs completed</label><input type="number" id="debrief-jobs" min="0" required></div>
-        <div class="field"><label>Date</label><input type="date" id="debrief-date" required></div>
+        <div class="field"><label>Technician</label>
+          <input type="text" id="debrief-tech-input" list="tech-list" placeholder="Type or select technician" oninput="refreshDebriefJobPicker()" required>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="debrief-date" onchange="refreshDebriefJobPicker()" required></div>
+      </div>
+      <div class="field">
+        <label>Link to this tech's dispatched jobs</label>
+        <div class="debrief-jobs-picker" id="debrief-jobs-picker">
+          <div class="debrief-jobs-hint">Select a technician and date to see their dispatched jobs.</div>
+        </div>
+        <div class="debrief-jobs-count" id="debrief-jobs-count"></div>
+      </div>
+      <div class="field" id="debrief-jobs-manual-wrap" style="display:none;">
+        <label>Jobs completed (no dispatched jobs matched — enter manually)</label>
+        <input type="number" id="debrief-jobs" min="0">
       </div>
       <div class="field"><label>Notes</label><textarea id="debrief-notes" placeholder="How the day went, issues, follow-ups needed..."></textarea></div>
       <div class="modal-actions">
@@ -1158,6 +1186,13 @@
       if(name === 'debrief'){
         const dateField = document.getElementById('debrief-date');
         if(dateField) dateField.value = new Date().toISOString().slice(0,10);
+        debriefEditingJobIds = new Set();
+        const picker = document.getElementById('debrief-jobs-picker');
+        if(picker) picker.innerHTML = `<div class="debrief-jobs-hint">Select a technician and date to see their dispatched jobs.</div>`;
+        const countEl = document.getElementById('debrief-jobs-count');
+        if(countEl) countEl.textContent = '';
+        const manualWrap = document.getElementById('debrief-jobs-manual-wrap');
+        if(manualWrap) manualWrap.style.display = 'none';
       }
       if(name === 'call'){
         const timeField = document.getElementById('call-time');
@@ -1559,16 +1594,22 @@ Cool Bros Heating & Air Conditioning`;
   }
 
   async function loadDebriefs(){
-    const { data } = await db.from('tech_debriefs').select('*').order('debrief_date', {ascending:false});
-    rowCache.debriefs = data || [];
+    const [debriefsRes, jobsRes] = await Promise.all([
+      db.from('tech_debriefs').select('*').order('debrief_date', {ascending:false}),
+      db.from('jobs').select('id, job_number, technician, scheduled_date')
+    ]);
+    rowCache.debriefs = debriefsRes.data || [];
+    rowCache.debriefJobsLite = jobsRes.data || [];
     renderDebriefs(rowCache.debriefs);
   }
 
   function filterDebriefs(){
     const q = document.getElementById('debrief-search').value.trim().toLowerCase();
     if(!q){ renderDebriefs(rowCache.debriefs); return; }
+    const idToJob = new Map((rowCache.debriefJobsLite||[]).map(j => [j.id, j]));
     const filtered = (rowCache.debriefs || []).filter(row => {
-      const haystack = [row.technician, row.notes].filter(Boolean).join(' ').toLowerCase();
+      const linkedNums = (Array.isArray(row.job_ids) ? row.job_ids : []).map(id => idToJob.get(id)?.job_number).filter(Boolean).join(' ');
+      const haystack = [row.technician, row.notes, linkedNums].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(q);
     });
     renderDebriefs(filtered);
@@ -1582,13 +1623,63 @@ Cool Bros Heating & Air Conditioning`;
   function renderDebriefs(data){
     clearRows('table-debriefs');
     if(!data || !data.length){
-      document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', `<tr><td colspan="6" style="text-align:center; color:var(--text-faint); padding:20px;">No matching debriefs found.</td></tr>`);
+      document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', `<tr><td colspan="7" style="text-align:center; color:var(--text-faint); padding:20px;">No matching debriefs found.</td></tr>`);
       return;
     }
+    const jobsLite = rowCache.debriefJobsLite || [];
+    const idToJob = new Map(jobsLite.map(j => [j.id, j]));
     data.forEach(row => {
-      const html = `<tr><td>${row.technician||'—'}</td><td class="mono">${row.debrief_date ? fmtDate(row.debrief_date) : '—'}</td><td>${row.jobs_completed ?? '—'}</td><td>${row.notes||'—'}</td><td>${pillSpan('Submitted','paid')}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
+      const linkedIds = Array.isArray(row.job_ids) ? row.job_ids : [];
+      const linkedNums = linkedIds.map(id => idToJob.get(id)).filter(Boolean).map(j => j.job_number);
+      const linkedHtml = linkedNums.length
+        ? linkedNums.map(n => `<span class="pill scheduled">#${n}</span>`).join(' ')
+        : '<span style="color:var(--text-faint);">—</span>';
+      const totalForTechDate = jobsLite.filter(j => j.technician === row.technician && j.scheduled_date === row.debrief_date).length;
+      const missing = totalForTechDate - linkedIds.length;
+      const flagHtml = missing > 0
+        ? ` <span class="pill unpaid" title="${missing} dispatched job(s) for this tech on this date aren't linked to this debrief">⚠ ${missing} unlinked</span>`
+        : '';
+      const jobsDoneDisplay = linkedIds.length ? linkedIds.length : (row.jobs_completed ?? '—');
+      const html = `<tr><td>${row.technician||'—'}</td><td class="mono">${row.debrief_date ? fmtDate(row.debrief_date) : '—'}</td><td>${jobsDoneDisplay}</td><td>${linkedHtml}${flagHtml}</td><td>${row.notes||'—'}</td><td>${pillSpan('Submitted','paid')}</td><td><button class="btn-icon" onclick="editDebrief('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('tech_debriefs','${row.id}',loadDebriefs)">Delete</button></td></tr>`;
       document.getElementById('table-debriefs').insertAdjacentHTML('beforeend', html);
     });
+  }
+
+  // ---------- Debrief job picker (links a debrief to real dispatched jobs) ----------
+  let debriefEditingJobIds = new Set();
+
+  async function refreshDebriefJobPicker(){
+    const tech = document.getElementById('debrief-tech-input').value.trim();
+    const date = document.getElementById('debrief-date').value;
+    const picker = document.getElementById('debrief-jobs-picker');
+    if(!tech || !date){
+      picker.innerHTML = `<div class="debrief-jobs-hint">Select a technician and date to see their dispatched jobs.</div>`;
+      updateDebriefJobsCount();
+      return;
+    }
+    picker.innerHTML = `<div class="debrief-jobs-hint">Loading jobs…</div>`;
+    const { data, error } = await db.from('jobs').select('id, job_number, job_type, status, customers(first_name,last_name)').eq('technician', tech).eq('scheduled_date', date);
+    if(error){ picker.innerHTML = `<div class="debrief-jobs-hint">Could not load jobs.</div>`; return; }
+    const jobs = data || [];
+    if(!jobs.length){
+      picker.innerHTML = `<div class="debrief-jobs-hint">No dispatched jobs found for ${tech} on this date. You can still save a debrief using the manual field below.</div>`;
+      document.getElementById('debrief-jobs-manual-wrap').style.display = '';
+      updateDebriefJobsCount();
+      return;
+    }
+    document.getElementById('debrief-jobs-manual-wrap').style.display = 'none';
+    picker.innerHTML = jobs.map(j => {
+      const checked = debriefEditingJobIds.has(j.id) ? 'checked' : '';
+      const cust = custName(j);
+      return `<label class="debrief-job-row"><input type="checkbox" value="${j.id}" onchange="updateDebriefJobsCount()" ${checked}><span class="djr-num">#${j.job_number}</span><span class="djr-cust">${cust} — ${j.job_type||'—'}</span></label>`;
+    }).join('');
+    updateDebriefJobsCount();
+  }
+
+  function updateDebriefJobsCount(){
+    const checked = document.querySelectorAll('#debrief-jobs-picker input[type=checkbox]:checked');
+    const countEl = document.getElementById('debrief-jobs-count');
+    countEl.textContent = checked.length ? `${checked.length} job(s) linked to this debrief` : '';
   }
 
   async function submitDebrief(e){
@@ -1598,16 +1689,22 @@ Cool Bros Heating & Air Conditioning`;
     const jobs = document.getElementById('debrief-jobs');
     const date = document.getElementById('debrief-date');
     const notes = document.getElementById('debrief-notes');
+    const checkedIds = Array.from(document.querySelectorAll('#debrief-jobs-picker input[type=checkbox]:checked')).map(cb => cb.value);
+    const jobs_completed = checkedIds.length ? checkedIds.length : (parseInt(jobs.value) || 0);
     try{
-      const payload = { technician: tech.value, jobs_completed: parseInt(jobs.value), debrief_date: date.value, notes: notes.value || null };
+      const payload = { technician: tech.value, jobs_completed, job_ids: checkedIds, debrief_date: date.value, notes: notes.value || null };
       let error;
       if(editState.debrief){
         ({ error } = await db.from('tech_debriefs').update(payload).eq('id', editState.debrief));
       } else {
         ({ error } = await db.from('tech_debriefs').insert(payload));
       }
-      if(error) throw error;
+      if(error){
+        if(/job_ids/i.test(error.message||'')) throw new Error('Your Supabase database needs a job_ids column (uuid array) added to the tech_debriefs table. Run the migration, then save again.');
+        throw error;
+      }
       editState.debrief = null;
+      debriefEditingJobIds = new Set();
       f.reset(); closeModal('debrief'); showToast('Debrief saved'); await loadDebriefs();
     } catch(err){ alert(err.message); }
     return false;
@@ -1617,10 +1714,12 @@ Cool Bros Heating & Air Conditioning`;
     const row = findCached('debriefs', id);
     if(!row) return;
     editState.debrief = id;
+    debriefEditingJobIds = new Set(Array.isArray(row.job_ids) ? row.job_ids : []);
     document.getElementById('debrief-tech-input').value = row.technician || '';
     document.getElementById('debrief-jobs').value = row.jobs_completed ?? '';
     document.getElementById('debrief-date').value = row.debrief_date || '';
     document.getElementById('debrief-notes').value = row.notes || '';
+    refreshDebriefJobPicker();
     const h3 = document.querySelector('#modal-debrief .modal-head h3');
     if(h3) h3.textContent = 'Edit debrief';
     const btn = document.querySelector('#modal-debrief button[type=submit]');
