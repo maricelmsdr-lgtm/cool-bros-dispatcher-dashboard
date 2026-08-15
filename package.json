@@ -1,0 +1,14 @@
+{
+  "name": "cool-bros-dispatcher",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "start": "vite"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "vite": "^7.0.0"
+  },
+  "devDependencies": {}
+}

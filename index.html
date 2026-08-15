@@ -478,12 +478,13 @@
       <li class="nav-item" data-view="leads"><span class="dot"></span>Leads</li>
       <li class="nav-item" data-view="estimates"><span class="dot"></span>Estimates</li>
       <li class="nav-item" data-view="callbacks"><span class="dot"></span>Callbacks</li>
-      <li class="nav-item" data-view="installs"><span class="dot"></span>Installations</li>
+      <li class="nav-item" data-view="equipmentjb"><span class="dot"></span>Equipment &amp; JB Warranty</li>
       <li class="nav-item" data-view="warranty"><span class="dot"></span>Warranty &amp; parts</li>
-      <li class="nav-item" data-view="jbwarranty"><span class="dot"></span>JB warranty clients</li>
+      
       <li class="nav-item" data-view="serviceplans"><span class="dot"></span>Service plans</li>
       <li class="nav-item" data-view="invoices"><span class="dot"></span>Invoices</li>
       <li class="nav-item" data-view="report"><span class="dot"></span>Daily report</li>
+      <li class="nav-item" onclick="openEmailComposer()"><span class="dot"></span>Email center</li>
     </ul>
     <div class="sidebar-foot" id="sidebar-foot">
       <span id="whoami"></span><br>
@@ -501,7 +502,10 @@
           <h1>Today</h1>
           <div class="date" id="dash-date">—</div>
         </div>
-        <button class="btn btn-primary" onclick="goTo('report')">Generate daily report</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" onclick="openEmailComposer()">✉ Send Email</button>
+          <button class="btn btn-primary" onclick="goTo('report')">Generate daily report</button>
+        </div>
       </div>
 
       <div class="stat-grid">
@@ -661,54 +665,20 @@
       </div>
     </div>
 
-    <!-- ============ INSTALLATIONS ============ -->
-    <div class="view" id="view-installs">
+    <!-- ============ EQUIPMENT & JB WARRANTY ============ -->
+    <div class="view" id="view-equipmentjb">
       <div class="module-head">
-        <div><h2>Installations — new equipment</h2><div class="module-sub">Equipment installed, with serial/model, registration and install dates</div></div>
+        <div><h2>Equipment &amp; JB Warranty Registration</h2><div class="module-sub">One equipment record for the customer, equipment, installation and JB warranty registration</div></div>
         <div style="display:flex; gap:8px;">
-          <button class="btn" onclick="downloadTableCSV('table-installs','installations_backup.csv')">⬇ CSV</button>
-          <button class="btn" onclick="downloadTablePDF('table-installs','installations_backup.pdf','Installations')">⬇ PDF</button>
-          <button class="btn btn-primary" onclick="openModal('install', true)">+ Log installation</button>
+          <button class="btn" onclick="downloadTableCSV('table-equipmentjb','equipment_jb_warranty_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-equipmentjb','equipment_jb_warranty_backup.pdf','Equipment & JB Warranty Registration')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('equipmentjb', true)">+ Add Equipment</button>
         </div>
       </div>
       <div class="table-scroll">
-<table class="data" id="table-installs">
-        <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Registration date</th><th>Certificate</th><th>Actions</th></tr>
-      </table>
-      </div>
-    </div>
-
-    <!-- ============ WARRANTY & PARTS ============ -->
-    <div class="view" id="view-warranty">
-      <div class="module-head">
-        <div><h2>Warranty &amp; parts replaced</h2><div class="module-sub">Warranty claims and parts swapped under warranty</div></div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn" onclick="downloadTableCSV('table-warranty','warranty_claims_backup.csv')">⬇ CSV</button>
-          <button class="btn" onclick="downloadTablePDF('table-warranty','warranty_claims_backup.pdf','Warranty claims')">⬇ PDF</button>
-          <button class="btn btn-primary" onclick="openModal('warranty', true)">+ Log warranty item</button>
-        </div>
-      </div>
-      <div class="table-scroll">
-<table class="data" id="table-warranty">
-        <tr><th>Customer</th><th>Part replaced</th><th>Reason</th><th>Job</th><th>Status</th><th>Actions</th></tr>
-      </table>
-      </div>
-    </div>
-
-    <!-- ============ JB WARRANTY CLIENTS ============ -->
-    <div class="view" id="view-jbwarranty">
-      <div class="module-head">
-        <div><h2>2026 JB warranty clients</h2><div class="module-sub">Clients under JB warranty and years remaining</div></div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn" onclick="downloadTableCSV('table-jbwarranty','jb_warranty_clients_backup.csv')">⬇ CSV</button>
-          <button class="btn" onclick="downloadTablePDF('table-jbwarranty','jb_warranty_clients_backup.pdf','Jb warranty clients')">⬇ PDF</button>
-          <button class="btn btn-primary" onclick="openModal('jbwarranty', true)">+ Add client</button>
-        </div>
-      </div>
-      <div class="table-scroll">
-<table class="data" id="table-jbwarranty">
-        <tr><th>Customer</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Warranty start</th><th>Warranty length</th><th>Status</th><th>Certificate</th><th>Actions</th></tr>
-      </table>
+        <table class="data" id="table-equipmentjb">
+          <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>JB warranty</th><th>Certificate</th><th>Actions</th></tr>
+        </table>
       </div>
     </div>
 
@@ -812,36 +782,35 @@
   </div>
 </div>
 
-<div class="modal-backdrop" id="modal-install">
-  <div class="modal">
-    <div class="modal-head"><h3 data-add-label="Log installation">Log installation</h3><button class="modal-close" onclick="closeModal('install')">&times;</button></div>
-    <form onsubmit="return submitInstall(event)">
-      <div class="field-row customer-profile-fields">
-        <div class="field"><label>First Name</label><input type="text" id="install-first-name" required></div>
-        <div class="field"><label>Last Name</label><input type="text" id="install-last-name" required></div>
-      </div>
-      <div class="field-row customer-profile-fields">
-        <div class="field"><label>Contact Number</label><input type="tel" id="install-phone" required></div>
-        <div class="field"><label>Email Address</label><input type="email" id="install-email" required></div>
-      </div>
-      <div class="field"><label>Address</label><input type="text" id="install-address" required></div>
-      <input type="hidden" id="install-customer">
-      <div id="equipment-rows">
-        <div class="equipment-row field-row">
-          <div class="field"><label>Equipment</label><input type="text" class="eq-equipment" placeholder="e.g. Split-type AC unit" required></div>
-          <div class="field"><label>Model no.</label><input type="text" class="eq-model" required onblur="lookupLinkedEquipment(this, 'install')"></div>
-          <div class="field"><label>Serial no.</label><input type="text" class="eq-serial" required onblur="lookupLinkedEquipment(this, 'install')"></div>
-          <div class="field"><label>Certificate of warranty</label><input type="file" class="eq-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current"></div></div>
-        </div>
-      </div>
-      <button type="button" class="btn" onclick="addEquipmentRow()" style="margin-bottom:12px;">+ Add another equipment</button>
+<div class="modal-backdrop" id="modal-equipmentjb">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head"><h3 data-add-label="Add Equipment & JB Warranty Registration">Add Equipment &amp; JB Warranty Registration</h3><button class="modal-close" onclick="closeModal('equipmentjb')">&times;</button></div>
+    <form onsubmit="return submitEquipmentJb(event)">
+      <div class="field-row"><div class="field"><label>Customer name</label><input type="text" id="eqjb-customer" required></div><div class="field"><label>Client email</label><input type="email" id="eqjb-email" placeholder="client@example.com"></div></div>
       <div class="field-row">
-        <div class="field"><label>Install date</label><input type="date" id="install-date" required></div>
-        <div class="field"><label>Registration date</label><input type="date" id="install-regdate"></div>
+        <div class="field"><label>Brand</label><select id="eqjb-brand" required><option value="">Choose brand</option><option>Mitsubishi</option><option>Daikin</option><option>American Standard</option><option>Amana</option><option>Fujitsu</option><option>Rheem</option><option>Other</option></select></div>
+        <div class="field"><label>Equipment type</label><input type="text" id="eqjb-equipment" placeholder="e.g. Mini Split, Central AC" required></div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>Model number</label><input type="text" id="eqjb-model" required></div>
+        <div class="field"><label>Serial number</label><input type="text" id="eqjb-serial" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Installation date</label><input type="date" id="eqjb-install-date" required></div>
+        <div class="field"><label>Registration date</label><input type="date" id="eqjb-reg-date"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Technician / Installer</label><input type="text" id="eqjb-technician" placeholder="Optional"></div>
+        <div class="field"><label>JB Warranty Status</label><select id="eqjb-jb-status"><option>Pending</option><option>Registered</option><option>Active</option><option>Expired</option><option>Not Applicable</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>JB Warranty Length (years)</label><input type="number" id="eqjb-jb-length" min="1" max="20" placeholder="e.g. 10"></div>
+        <div class="field"><label>Warranty certificate</label><input type="file" id="eqjb-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current" id="eqjb-cert-current"></div></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="eqjb-notes" placeholder="Optional equipment or warranty notes"></textarea></div>
       <div class="modal-actions">
-        <button type="button" class="btn" onclick="closeModal('install')">Cancel</button>
-        <button type="submit" class="btn btn-primary" data-add-label="Save installation">Save installation</button>
+        <button type="button" class="btn" onclick="closeModal('equipmentjb')">Cancel</button>
+        <button type="submit" class="btn btn-primary" data-add-label="Save Equipment & JB Warranty">Save Equipment &amp; JB Warranty</button>
       </div>
     </form>
   </div>
@@ -1010,41 +979,6 @@
   </div>
 </div>
 
-<div class="modal-backdrop" id="modal-jbwarranty">
-  <div class="modal">
-    <div class="modal-head"><h3 data-add-label="Add JB warranty client">Add JB warranty client</h3><button class="modal-close" onclick="closeModal('jbwarranty')">&times;</button></div>
-    <form onsubmit="return submitJbwarranty(event)">
-      <div class="field-row customer-profile-fields">
-        <div class="field"><label>First Name</label><input type="text" id="jbwarranty-first-name" required></div>
-        <div class="field"><label>Last Name</label><input type="text" id="jbwarranty-last-name" required></div>
-      </div>
-      <div class="field-row customer-profile-fields">
-        <div class="field"><label>Contact Number</label><input type="tel" id="jbwarranty-phone" required></div>
-        <div class="field"><label>Email Address</label><input type="email" id="jbwarranty-email" required></div>
-      </div>
-      <div class="field"><label>Address</label><input type="text" id="jbwarranty-address" required></div>
-      <input type="hidden" id="jbwarranty-customer">
-      <div id="jbwarranty-equipment-rows">
-        <div class="equipment-row field-row">
-          <div class="field"><label>Equipment</label><input type="text" class="jbw-equipment" required></div>
-          <div class="field"><label>Model no.</label><input type="text" class="jbw-model" onblur="lookupLinkedEquipment(this, 'jb')"></div>
-          <div class="field"><label>Serial no.</label><input type="text" class="jbw-serial" onblur="lookupLinkedEquipment(this, 'jb')"></div>
-          <div class="field"><label>Certificate of warranty</label><input type="file" class="jbw-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current"></div></div>
-        </div>
-      </div>
-      <button type="button" class="btn" onclick="addJbwarrantyEquipmentRow()" style="margin-bottom:12px;">+ Add another equipment</button>
-      <div class="field-row">
-        <div class="field"><label>Warranty start year</label><input type="number" id="jbwarranty-startyear" placeholder="2026" min="2000" max="2100" required></div>
-        <div class="field"><label>Warranty length (years)</label><input type="number" id="jbwarranty-length" min="1" max="20" required></div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn" onclick="closeModal('jbwarranty')">Cancel</button>
-        <button type="submit" class="btn btn-primary" data-add-label="Save client">Save client</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div class="modal-backdrop" id="modal-serviceplan">
   <div class="modal">
     <div class="modal-head"><h3 data-add-label="Add service plan">Add service plan</h3><button class="modal-close" onclick="closeModal('serviceplan')">&times;</button></div>
@@ -1086,6 +1020,32 @@
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('invoice')">Cancel</button>
         <button type="submit" class="btn btn-primary" data-add-label="Save invoice">Save invoice</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ EMAIL COMPOSER ============ -->
+<div class="modal-backdrop" id="modal-email">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-head">
+      <h3>Send Email</h3>
+      <button class="modal-close" onclick="closeModal('email')">&times;</button>
+    </div>
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text-dim);">
+      <strong style="color:var(--text);">Sending account:</strong> Maricel &lt;maricel@coolbrosco.com&gt;
+      <div style="margin-top:4px;font-size:11px;">The button below opens Gmail with this account selected. Gmail must be signed in as <b>maricel@coolbrosco.com</b> for the message to be sent from that address.</div>
+    </div>
+    <form onsubmit="return sendDispatcherEmail(event)">
+      <div class="field-row">
+        <div class="field"><label>To</label><input type="email" id="email-to" placeholder="client@example.com" required></div>
+        <div class="field"><label>CC</label><input type="text" id="email-cc" placeholder="optional"></div>
+      </div>
+      <div class="field"><label>Subject</label><input type="text" id="email-subject" required></div>
+      <div class="field"><label>Message</label><textarea id="email-body" style="min-height:220px;" required></textarea></div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="closeModal('email')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Open Gmail &amp; Send</button>
       </div>
     </form>
   </div>
@@ -1200,6 +1160,12 @@
     return [row.customers.first_name, row.customers.last_name].filter(Boolean).join(' ') || '—';
   }
 
+  document.addEventListener('DOMContentLoaded', () => {
+    wireWarrantyLookup();
+    document.getElementById('modal-install')?.addEventListener('click', () => setTimeout(wireWarrantyLookup, 0));
+    document.getElementById('modal-jbwarranty')?.addEventListener('click', () => setTimeout(wireWarrantyLookup, 0));
+  });
+
   // ---------- AUTH ----------
   function toggleAuthMode(){
     authMode = authMode === 'login' ? 'signup' : 'login';
@@ -1289,7 +1255,7 @@
   function applyRoleUI(){
     const nav = document.getElementById('nav');
     if(currentRole === 'boss'){
-      const allowed = ['report', 'dashboard', 'installs', 'jbwarranty', 'serviceplans', 'calls'];
+      const allowed = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls'];
       nav.querySelectorAll('.nav-item').forEach(i => { i.style.display = allowed.includes(i.dataset.view) ? '' : 'none'; });
       document.getElementById('report-save-btn').style.display = 'none';
       goTo('report');
@@ -1300,92 +1266,128 @@
     }
   }
 
-  // ---------- SHARED CUSTOMER / EQUIPMENT LOOKUP ----------
-  function profileValues(prefix){
-    const g=id => document.getElementById(`${prefix}-${id}`);
-    return {
-      first_name: (g('first-name')?.value || '').trim(),
-      last_name: (g('last-name')?.value || '').trim(),
-      phone: (g('phone')?.value || '').trim(),
-      email: (g('email')?.value || '').trim().toLowerCase(),
-      address: (g('address')?.value || '').trim()
-    };
-  }
-  function setProfileValues(prefix, c){
-    const set=(id,v)=>{ const el=document.getElementById(`${prefix}-${id}`); if(el && v != null) el.value=v; };
-    set('first-name', c.first_name || ''); set('last-name', c.last_name || '');
-    set('phone', c.phone || ''); set('email', c.email || ''); set('address', c.address || '');
-    const hidden=document.getElementById(`${prefix}-customer`);
-    if(hidden) hidden.value=`${c.first_name||''} ${c.last_name||''}`.trim();
-  }
-  async function findOrCreateCustomer(profile){
-    if(typeof profile === 'string'){
-      const parts=profile.trim().split(/\s+/).filter(Boolean);
-      profile={first_name:parts.shift()||'', last_name:parts.join(' '), phone:'', email:'', address:''};
-    }
-    const first_name=(profile.first_name||'').trim(), last_name=(profile.last_name||'').trim();
-    if(!first_name) throw new Error('Customer first name is required.');
-    const { data: existing, error: findErr } = await db
-  .from('customers')
-  .select('id, first_name, last_name, phone, email, address');
-    if(findErr) throw findErr;
-    const norm=v=>(v||'').trim().toLowerCase();
-    const match=(existing||[]).find(c =>
-      (norm(c.email) && norm(c.email)===norm(profile.email)) ||
-      (norm(c.phone) && norm(c.phone)===norm(profile.phone)) ||
-      (norm(c.first_name)===norm(first_name) && norm(c.last_name)===norm(last_name))
-    );
-    const payload={first_name,last_name,phone:profile.phone,email:profile.email,address:profile.address};
+  // ---------- CUSTOMER LOOKUP / CREATE ----------
+  async function findOrCreateCustomer(fullName, email=''){
+    const normalizedName = fullName.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const parts = normalizedName.split(/\s+/);
+    const last_name = parts.length > 1 ? parts.pop() : '';
+    const first_name = parts.join(' ') || normalizedName;
+    const { data: existing, error: lookupError } = await db.from('customers').select('id, first_name, last_name, email');
+    if(lookupError) throw lookupError;
+    const match = (existing || []).find(c => `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase() === normalizedName.toLowerCase());
     if(match){
-      const { error }=await db.from('customers').update(payload).eq('id',match.id); if(error) throw error; return match.id;
+      if(normalizedEmail && (match.email || '').trim().toLowerCase() !== normalizedEmail){
+        const { error } = await db.from('customers').update({ email: normalizedEmail }).eq('id', match.id);
+        if(error) throw error;
+      }
+      return match.id;
     }
-    const { data:created,error }=await db.from('customers').insert(payload).select('id').single();
-    if(error) throw error; return created.id;
+    const { data: created, error } = await db.from('customers').insert({ first_name, last_name, email: normalizedEmail || null }).select('id').single();
+    if(error) throw error;
+    return created.id;
   }
-  async function getCustomerById(id){
-    const {data,error}=await db.from('customers').select('id,first_name,last_name,phone,email,address').eq('id',id).maybeSingle();
-    if(error) throw error; return data;
-  }
-  async function findLinkedEquipment(model, serial){
-    const m=(model||'').trim(), sr=(serial||'').trim();
-    if(!m && !sr) return null;
-    const tables=['installations','jb_warranty_clients'];
-    for(const table of tables){
-      let q=db.from(table).select('id,customer_id,equipment,model,serial,certificate_url,customers(id,first_name,last_name,phone,email,address)');
-      if(sr) q=q.ilike('serial',sr);
-      else if(m) q=q.ilike('model',m);
-      const {data,error}=await q.limit(1).maybeSingle();
-      if(error) throw error;
-      if(data) return {...data, source_table:table};
-    }
-    return null;
-  }
-  async function lookupLinkedEquipment(input, prefix){
-    const row=input?.closest('.equipment-row'); if(!row) return;
-    const model=row.querySelector(prefix==='install'?'.eq-model':'.jbw-model')?.value||'';
-    const serial=row.querySelector(prefix==='install'?'.eq-serial':'.jbw-serial')?.value||'';
-    if(!model && !serial) return;
+
+  async function lookupLinkedWarranty(field, value, source){
+    const q = (value || '').trim();
+    if(!q || q.length < 3) return;
+    const column = field === 'serial' ? 'serial' : 'model';
     try{
-      const linked=await findLinkedEquipment(model,serial);
-      if(!linked) return;
-      const c=linked.customers;
-      if(c) setProfileValues(prefix==='install'?'install':'jbwarranty',c);
-      const eq=row.querySelector(prefix==='install'?'.eq-equipment':'.jbw-equipment');
-      if(eq && !eq.value) eq.value=linked.equipment||'';
-      const mo=row.querySelector(prefix==='install'?'.eq-model':'.jbw-model');
-      const se=row.querySelector(prefix==='install'?'.eq-serial':'.jbw-serial');
-      if(mo && linked.model) mo.value=linked.model; if(se && linked.serial) se.value=linked.serial;
-      showToast('Linked existing equipment and customer profile');
-    }catch(err){ console.error('Linked equipment lookup failed',err); }
+      const [instRes, jbRes] = await Promise.all([
+        db.from('installations').select('id,customer_id,equipment,model,serial,install_date,registration_date,certificate_url,customers(first_name,last_name,email)').ilike(column, q).limit(5),
+        db.from('jb_warranty_clients').select('id,customer_id,equipment,model,serial,warranty_start_year,warranty_length_years,certificate_url,customers(first_name,last_name,email)').ilike(column, q).limit(5)
+      ]);
+      const found = [...(instRes.data || []), ...(jbRes.data || [])].find(r => {
+        const v = String(r[column] || '').trim().toLowerCase();
+        return v === q.toLowerCase();
+      });
+      if(!found) return;
+      const c = found.customers || {};
+      if(source === 'install'){
+        document.getElementById('install-customer').value = [c.first_name,c.last_name].filter(Boolean).join(' ') || document.getElementById('install-customer').value;
+        document.getElementById('install-email').value = c.email || '';
+        document.querySelector('#equipment-rows .eq-equipment').value = found.equipment || '';
+        document.querySelector('#equipment-rows .eq-model').value = found.model || '';
+        document.querySelector('#equipment-rows .eq-serial').value = found.serial || '';
+      } else {
+        document.getElementById('jbwarranty-customer').value = [c.first_name,c.last_name].filter(Boolean).join(' ') || document.getElementById('jbwarranty-customer').value;
+        document.getElementById('jbwarranty-email').value = c.email || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-equipment').value = found.equipment || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-model').value = found.model || '';
+        document.querySelector('#jbwarranty-equipment-rows .jbw-serial').value = found.serial || '';
+        if(found.warranty_start_year) document.getElementById('jbwarranty-startyear').value = found.warranty_start_year;
+        if(found.warranty_length_years) document.getElementById('jbwarranty-length').value = found.warranty_length_years;
+      }
+      showToast(`Linked ${source === 'install' ? 'JB / warranty' : 'installation'} record found`);
+    }catch(err){ console.warn('Warranty lookup failed:', err); }
   }
-  function warrantyMailto(row, type){
-    const c=row.customers||{};
-    const email=(c.email||'').trim();
-    if(!email){ alert('This customer does not have an email address saved. Edit the warranty registration and add the client email first.'); return; }
-    const name=`${c.first_name||''} ${c.last_name||''}`.trim() || 'Client';
-    const subject=encodeURIComponent(`Cool Bros ${type} Warranty Document - ${row.equipment||'Equipment'}`);
-    const body=encodeURIComponent(`Hi ${name},\n\nPlease find your Cool Bros ${type} warranty document for ${row.equipment||'your equipment'}.\n\nModel: ${row.model||'N/A'}\nSerial: ${row.serial||'N/A'}\n\nWarranty document: ${row.certificate_url||'Please contact us if the document is not available.'}\n\nThank you,\nCool Bros Corp Heating & Air Conditioning`);
-    window.location.href=`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+
+  function wireWarrantyLookup(){
+    const installSerial = document.querySelector('#eqjb-serial');
+    const installModel = document.querySelector('#eqjb-model');
+    const jbSerial = document.querySelector('#eqjb-serial');
+    const jbModel = document.querySelector('#eqjb-model');
+    if(installSerial && !installSerial.dataset.linked){ installSerial.dataset.linked='1'; installSerial.addEventListener('blur',()=>lookupLinkedWarranty('serial',installSerial.value,'install')); }
+    if(installModel && !installModel.dataset.linked){ installModel.dataset.linked='1'; installModel.addEventListener('blur',()=>lookupLinkedWarranty('model',installModel.value,'install')); }
+    if(jbSerial && !jbSerial.dataset.linked){ jbSerial.dataset.linked='1'; jbSerial.addEventListener('blur',()=>lookupLinkedWarranty('serial',jbSerial.value,'jb')); }
+    if(jbModel && !jbModel.dataset.linked){ jbModel.dataset.linked='1'; jbModel.addEventListener('blur',()=>lookupLinkedWarranty('model',jbModel.value,'jb')); }
+  }
+
+  function openEmailComposer(prefill={}){
+    const modal=document.getElementById('modal-email');
+    if(!modal) return;
+    document.getElementById('email-to').value=prefill.to || '';
+    document.getElementById('email-cc').value=prefill.cc || '';
+    document.getElementById('email-subject').value=prefill.subject || '';
+    document.getElementById('email-body').value=prefill.body || '';
+    modal.classList.add('active');
+    setTimeout(()=>document.getElementById('email-to').focus(),50);
+  }
+
+  function sendDispatcherEmail(event){
+    event.preventDefault();
+    const to=document.getElementById('email-to').value.trim();
+    const cc=document.getElementById('email-cc').value.trim();
+    const subject=document.getElementById('email-subject').value.trim();
+    const body=document.getElementById('email-body').value;
+    if(!to || !subject || !body) return false;
+
+    const params=new URLSearchParams();
+    params.set('view','cm');
+    params.set('fs','1');
+    params.set('to',to);
+    if(cc) params.set('cc',cc);
+    params.set('su',subject);
+    params.set('body',body);
+    params.set('authuser','maricel@coolbrosco.com');
+
+    window.open('https://mail.google.com/mail/?'+params.toString(),'_blank','noopener,noreferrer');
+    closeModal('email');
+    showToast('Gmail compose opened for maricel@coolbrosco.com');
+    return false;
+  }
+
+  function sendWarrantyDocument(type, id){
+    const collection = type === 'installation' ? rowCache.installs : rowCache.jbwarranty;
+    const row = (collection || []).find(r => String(r.id) === String(id));
+    if(!row || !row.certificate_url) return alert('No warranty certificate is attached to this record.');
+    const email = row.customers && row.customers.email ? row.customers.email.trim() : '';
+    if(!email) return alert('This customer does not have an email address. Edit the warranty record and add the client email first.');
+    const customerName = custName(row) === '—' ? 'Customer' : custName(row);
+    const subject = type === 'installation' ? 'Cool Bros — Installation Warranty Certificate' : 'Cool Bros — JB Warranty Certificate';
+    const body = `Hi ${customerName},
+
+Thank you for choosing Cool Bros Heating & Air Conditioning.
+
+Please find your warranty certificate here:
+${row.certificate_url}
+
+Please keep this document for your records. If you have any questions, please contact us.
+
+Thank you,
+Maricel
+Cool Bros Heating & Air Conditioning`;
+    openEmailComposer({to:email, subject, body});
   }
 
   // ---------- LOAD DATA INTO TABLES ----------
@@ -1395,7 +1397,7 @@
   }
 
   async function loadView(name){
-    const bossAllowedViews = ['report', 'dashboard', 'installs', 'jbwarranty', 'serviceplans', 'calls', 'kpi'];
+    const bossAllowedViews = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls', 'kpi'];
     if(currentRole !== 'dispatcher' && !bossAllowedViews.includes(name)) return;
     try{
       if(name === 'dashboard') await loadDashboardOverview();
@@ -1405,10 +1407,9 @@
       else if(name === 'leads') await loadLeads();
       else if(name === 'estimates') await loadEstimates();
       else if(name === 'callbacks') await loadCallbacks();
-      else if(name === 'installs') await loadInstalls();
+      else if(name === 'equipmentjb') await loadEquipmentJb();
       else if(name === 'warranty') await loadWarranty();
-      else if(name === 'jbwarranty') await loadJbwarranty();
-      else if(name === 'serviceplans') await loadServiceplans();
+            else if(name === 'serviceplans') await loadServiceplans();
       else if(name === 'invoices') await loadInvoices();
       else if(name === 'report') await loadReport();
       else if(name === 'kpi'){ updateKpiNavLabels(); await loadKPI(); }
@@ -1430,7 +1431,7 @@
     document.getElementById('dash-date').textContent = dateLabel + (who ? ' — dispatcher: ' + who : '');
 
     const [jobsRes, callsRes, leadsRes, warrantyRes, invoicesRes, debriefsRes] = await Promise.all([
-      db.from('jobs').select('*, customers(id,first_name,last_name,phone,email,address)'),
+      db.from('jobs').select('*, customers(first_name,last_name)'),
       db.from('call_log').select('outcome'),
       db.from('leads').select('status'),
       db.from('warranty_claims').select('status'),
@@ -1488,7 +1489,7 @@
   }
 
   async function loadDispatch(){
-    const { data } = await db.from('jobs').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('jobs').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.jobs = data || [];
     clearRows('table-dispatch');
     (data||[]).forEach(row => {
@@ -1705,7 +1706,7 @@
   }
 
   async function loadEstimates(){
-    const { data } = await db.from('estimates').select('*, customers(id,first_name,last_name,phone,email,address)').order('estimate_date', {ascending:false});
+    const { data } = await db.from('estimates').select('*, customers(first_name,last_name)').order('estimate_date', {ascending:false});
     rowCache.estimates = data || [];
     clearRows('table-estimates');
     (data||[]).forEach(row => {
@@ -1733,7 +1734,7 @@
   }
 
   async function loadCallbacks(){
-    const { data } = await db.from('callbacks').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('callbacks').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.callbacks = data || [];
     clearRows('table-callbacks');
     (data||[]).forEach(row => {
@@ -1743,19 +1744,23 @@
     });
   }
 
-  async function loadInstalls(){
-    const { data } = await db.from('installations').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
-    rowCache.installs = data || [];
-    clearRows('table-installs');
+  async function loadEquipmentJb(){
+    const { data, error } = await db.from('installations').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
+    if(error){ console.error(error); return alert('Could not load Equipment & JB Warranty records. Please run the Supabase migration included with this build.'); }
+    rowCache.equipmentjb = data || [];
+    clearRows('table-equipmentjb');
     (data||[]).forEach(row => {
       const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
-      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td class="mono">${fmtDate(row.registration_date)}</td><td>${cert}</td><td><button class="btn-icon" onclick="warrantyMailto(rowCache.installs.find(x=>x.id==='${row.id}'),'Installation')">Send</button> <button class="btn-icon" onclick="editInstall('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadInstalls)">Delete</button></td></tr>`;
-      document.getElementById('table-installs').insertAdjacentHTML('beforeend', html);
+      const send = row.certificate_url ? `<button class="btn-icon" onclick="sendEquipmentJbDocument('${row.id}')">Send</button>` : '';
+      const jb = row.jb_warranty_status || '—';
+      const jbCls = ['Active','Registered'].includes(jb) ? 'paid' : (jb === 'Expired' ? 'unpaid' : 'pending');
+      const html = `<tr><td>${custName(row)}</td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
+      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', html);
     });
   }
 
   async function loadWarranty(){
-    const { data } = await db.from('warranty_claims').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('warranty_claims').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.warranty = data || [];
     clearRows('table-warranty');
     (data||[]).forEach(row => {
@@ -1766,20 +1771,21 @@
   }
 
   async function loadJbwarranty(){
-    const { data } = await db.from('jb_warranty_clients').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('jb_warranty_clients').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.jbwarranty = data || [];
     clearRows('table-jbwarranty');
     (data||[]).forEach(row => {
       const active = (row.warranty_start_year + row.warranty_length_years) > new Date().getFullYear();
       const statusHtml = active ? pillSpan('Active','paid') : pillSpan('Expired','unpaid');
       const cert = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);">View</a>` : '—';
-      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td>${row.model||'—'}</td><td>${row.serial||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td><td>${cert}</td><td><button class="btn-icon" onclick="warrantyMailto(rowCache.jbwarranty.find(x=>x.id==='${row.id}'),'JB')">Send</button> <button class="btn-icon" onclick="editJbwarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jb_warranty_clients','${row.id}',loadJbwarranty)">Delete</button></td></tr>`;
+      const send = row.certificate_url ? `<button class="btn-icon" onclick="sendWarrantyDocument('jb','${row.id}')">Send</button>` : '';
+      const html = `<tr><td>${custName(row)}</td><td>${row.equipment||'—'}</td><td>${row.model||'—'}</td><td>${row.serial||'—'}</td><td class="mono">${row.warranty_start_year}</td><td>${row.warranty_length_years} years</td><td>${statusHtml}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editJbwarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jb_warranty_clients','${row.id}',loadJbwarranty)">Delete</button></td></tr>`;
       document.getElementById('table-jbwarranty').insertAdjacentHTML('beforeend', html);
     });
   }
 
   async function loadServiceplans(){
-    const { data } = await db.from('service_plans').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('service_plans').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.serviceplans = data || [];
     clearRows('table-serviceplans');
     (data||[]).forEach(row => {
@@ -1789,7 +1795,7 @@
   }
 
   async function loadInvoices(){
-    const { data } = await db.from('invoices').select('*, customers(id,first_name,last_name,phone,email,address)').order('created_at', {ascending:false});
+    const { data } = await db.from('invoices').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.invoices = data || [];
     clearRows('table-invoices');
     (data||[]).forEach(row => {
@@ -1887,8 +1893,8 @@
     row.className = 'equipment-row field-row';
     row.innerHTML = `
       <div class="field"><label>Equipment</label><input type="text" class="eq-equipment" placeholder="e.g. Split-type AC unit" required></div>
-      <div class="field"><label>Model no.</label><input type="text" class="eq-model" required onblur="lookupLinkedEquipment(this, 'install')"></div>
-      <div class="field"><label>Serial no.</label><input type="text" class="eq-serial" required onblur="lookupLinkedEquipment(this, 'install')"></div>
+      <div class="field"><label>Model no.</label><input type="text" class="eq-model" required></div>
+      <div class="field"><label>Serial no.</label><input type="text" class="eq-serial" required></div>
       <div class="field"><label>Certificate of warranty</label><input type="file" class="eq-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current"></div></div>
       <button type="button" class="btn" onclick="this.parentElement.remove()" style="align-self:center;">Remove</button>
     `;
@@ -1905,38 +1911,71 @@
     return data.publicUrl;
   }
 
-  async function submitInstall(e){
-    e.preventDefault(); const f=e.target;
-    const profile=profileValues('install');
-    const installDate=document.getElementById('install-date'), regDate=document.getElementById('install-regdate');
-    const rows=f.querySelectorAll('.equipment-row');
+  async function submitEquipmentJb(e){
+    e.preventDefault();
+    const f = e.target;
     try{
-      const customer_id=await findOrCreateCustomer(profile);
-      if(editState.install){
-        const row=rows[0], file=row.querySelector('.eq-certificate').files[0];
-        const payload={customer_id,equipment:row.querySelector('.eq-equipment').value,model:row.querySelector('.eq-model').value,serial:row.querySelector('.eq-serial').value,install_date:installDate.value||null,registration_date:regDate.value||null};
-        if(file) payload.certificate_url=await uploadCertificate(file,'installations');
-        const {error}=await db.from('installations').update(payload).eq('id',editState.install); if(error) throw error; editState.install=null;
-      }else{
-        for(const row of rows){
-          const equipment=row.querySelector('.eq-equipment').value, model=row.querySelector('.eq-model').value, serial=row.querySelector('.eq-serial').value, file=row.querySelector('.eq-certificate').files[0];
-          const certificate_url=await uploadCertificate(file,'installations');
-          const {error}=await db.from('installations').insert({customer_id,equipment,model,serial,install_date:installDate.value||null,registration_date:regDate.value||null,certificate_url}); if(error) throw error;
-        }
+      const customer_id = await findOrCreateCustomer(document.getElementById('eqjb-customer').value, document.getElementById('eqjb-email').value);
+      const file = document.getElementById('eqjb-certificate').files[0];
+      const payload = {
+        customer_id,
+        brand: document.getElementById('eqjb-brand').value,
+        equipment: document.getElementById('eqjb-equipment').value,
+        model: document.getElementById('eqjb-model').value,
+        serial: document.getElementById('eqjb-serial').value,
+        install_date: document.getElementById('eqjb-install-date').value || null,
+        registration_date: document.getElementById('eqjb-reg-date').value || null,
+        technician: document.getElementById('eqjb-technician').value || null,
+        jb_warranty_status: document.getElementById('eqjb-jb-status').value,
+        jb_warranty_length_years: document.getElementById('eqjb-jb-length').value ? parseInt(document.getElementById('eqjb-jb-length').value) : null,
+        notes: document.getElementById('eqjb-notes').value || null
+      };
+      if(file) payload.certificate_url = await uploadCertificate(file, 'equipment_jb_warranty');
+      let result;
+      if(editState.equipmentjb){ result = await db.from('installations').update(payload).eq('id', editState.equipmentjb); }
+      else { result = await db.from('installations').insert(payload); }
+      if(result.error){
+        if(/brand|jb_warranty|technician|notes/i.test(result.error.message||'')) throw new Error('Your Supabase database needs the Equipment & JB Warranty migration. Run the SQL file included with this build, then save again.');
+        throw result.error;
       }
-      f.reset(); document.getElementById('equipment-rows').querySelectorAll('.equipment-row').forEach((r,i)=>{if(i>0)r.remove();});
-      closeModal('install'); showToast('Installation saved'); await loadInstalls();
-    }catch(err){alert(err.message);} return false;
+      editState.equipmentjb = null; f.reset(); document.getElementById('eqjb-cert-current').innerHTML='';
+      closeModal('equipmentjb'); showToast('Equipment & JB Warranty saved'); await loadEquipmentJb();
+    } catch(err){ alert(err.message); }
+    return false;
   }
-  function editInstall(id){
-    const row=findCached('installs',id); if(!row)return; editState.install=id;
-    document.getElementById('equipment-rows').querySelectorAll('.equipment-row').forEach((r,i)=>{if(i>0)r.remove();});
-    const c=row.customers||{}; setProfileValues('install',c);
-    document.querySelector('#equipment-rows .eq-equipment').value=row.equipment||'';
-    document.querySelector('#equipment-rows .eq-model').value=row.model||''; document.querySelector('#equipment-rows .eq-serial').value=row.serial||'';
-    document.getElementById('install-date').value=row.install_date||''; document.getElementById('install-regdate').value=row.registration_date||'';
-    document.querySelector('#equipment-rows .cert-current').innerHTML=row.certificate_url?`<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);font-size:12px;">View current certificate</a>`:'';
-    const h3=document.querySelector('#modal-install .modal-head h3'); if(h3)h3.textContent='Edit installation'; const btn=document.querySelector('#modal-install button[type=submit]'); if(btn)btn.textContent='Save changes'; openModal('install');
+
+  function editEquipmentJb(id){
+    const row = findCached('equipmentjb', id);
+    if(!row) return;
+    editState.equipmentjb = id;
+    document.getElementById('eqjb-customer').value = custName(row);
+    document.getElementById('eqjb-email').value = row.customers?.email || '';
+    document.getElementById('eqjb-brand').value = row.brand || 'Other';
+    document.getElementById('eqjb-equipment').value = row.equipment || '';
+    document.getElementById('eqjb-model').value = row.model || '';
+    document.getElementById('eqjb-serial').value = row.serial || '';
+    document.getElementById('eqjb-install-date').value = row.install_date || '';
+    document.getElementById('eqjb-reg-date').value = row.registration_date || '';
+    document.getElementById('eqjb-technician').value = row.technician || '';
+    document.getElementById('eqjb-jb-status').value = row.jb_warranty_status || 'Pending';
+    document.getElementById('eqjb-jb-length').value = row.jb_warranty_length_years || '';
+    document.getElementById('eqjb-notes').value = row.notes || '';
+    document.getElementById('eqjb-cert-current').innerHTML = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);font-size:12px;">View current certificate</a>` : '';
+    const h3 = document.querySelector('#modal-equipmentjb .modal-head h3'); if(h3) h3.textContent='Edit Equipment & JB Warranty Registration';
+    const btn = document.querySelector('#modal-equipmentjb button[type=submit]'); if(btn) btn.textContent='Save changes';
+    openModal('equipmentjb');
+    setTimeout(wireWarrantyLookup,0);
+  }
+
+  function sendEquipmentJbDocument(id){
+    const row = findCached('equipmentjb', id);
+    if(!row || !row.certificate_url) return alert('No warranty document is attached to this equipment record.');
+    const email = row.customers?.email || '';
+    if(!email) return alert('Please add the client email address first.');
+    const name = custName(row) === '—' ? 'Customer' : custName(row);
+    const subject = `Cool Bros — ${row.brand||''} Equipment & JB Warranty Certificate`.replace('  ',' ');
+    const body = `Hi ${name},\n\nThank you for choosing Cool Bros Heating & Air Conditioning.\n\nPlease find your equipment and JB warranty document here:\n${row.certificate_url}\n\nEquipment: ${row.equipment||'—'}\nModel: ${row.model||'—'}\nSerial: ${row.serial||'—'}\nInstallation Date: ${fmtDate(row.install_date)}\n\nPlease keep this document for your records. If you have any questions, please contact us.\n\nThank you,\nMaricel\nCool Bros Heating & Air Conditioning`;
+    openEmailComposer({to:email,subject,body});
   }
 
   async function submitWarranty(e){
@@ -2170,44 +2209,83 @@
     row.className = 'equipment-row field-row';
     row.innerHTML = `
       <div class="field"><label>Equipment</label><input type="text" class="jbw-equipment" required></div>
-      <div class="field"><label>Model no.</label><input type="text" class="jbw-model" onblur="lookupLinkedEquipment(this, 'jb')"></div>
-      <div class="field"><label>Serial no.</label><input type="text" class="jbw-serial" onblur="lookupLinkedEquipment(this, 'jb')"></div>
+      <div class="field"><label>Model no.</label><input type="text" class="jbw-model"></div>
+      <div class="field"><label>Serial no.</label><input type="text" class="jbw-serial"></div>
       <div class="field"><label>Certificate of warranty</label><input type="file" class="jbw-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current"></div></div>
       <button type="button" class="btn" onclick="this.parentElement.remove()" style="align-self:center;">Remove</button>
     `;
     rows.appendChild(row);
+    wireWarrantyLookup();
   }
 
   async function submitJbwarranty(e){
-    e.preventDefault(); const f=e.target;
-    const profile=profileValues('jbwarranty'); const startYear=document.getElementById('jbwarranty-startyear'), length=document.getElementById('jbwarranty-length');
-    const rows=f.querySelectorAll('.equipment-row');
+    e.preventDefault();
+    const f = e.target;
+    const customer = document.getElementById('jbwarranty-customer');
+    const startYear = document.getElementById('jbwarranty-startyear');
+    const length = document.getElementById('jbwarranty-length');
+    const equipmentRows = f.querySelectorAll('.equipment-row');
     try{
-      const customer_id=await findOrCreateCustomer(profile);
+      const customer_id = await findOrCreateCustomer(customer.value, document.getElementById('jbwarranty-email').value);
       if(editState.jbwarranty){
-        const row=rows[0], file=row.querySelector('.jbw-certificate').files[0];
-        const payload={customer_id,equipment:row.querySelector('.jbw-equipment').value,model:row.querySelector('.jbw-model').value,serial:row.querySelector('.jbw-serial').value,warranty_start_year:parseInt(startYear.value),warranty_length_years:parseInt(length.value)};
-        if(file)payload.certificate_url=await uploadCertificate(file,'jb_warranty');
-        const {error}=await db.from('jb_warranty_clients').update(payload).eq('id',editState.jbwarranty); if(error)throw error; editState.jbwarranty=null;
-      }else{
-        for(const row of rows){
-          const equipment=row.querySelector('.jbw-equipment').value,model=row.querySelector('.jbw-model').value,serial=row.querySelector('.jbw-serial').value,file=row.querySelector('.jbw-certificate').files[0];
-          const certificate_url=await uploadCertificate(file,'jb_warranty');
-          const {error}=await db.from('jb_warranty_clients').insert({customer_id,equipment,model,serial,warranty_start_year:parseInt(startYear.value),warranty_length_years:parseInt(length.value),certificate_url}); if(error)throw error;
+        const row = equipmentRows[0];
+        const file = row.querySelector('.jbw-certificate').files[0];
+        const payload = {
+          customer_id,
+          equipment: row.querySelector('.jbw-equipment').value,
+          model: row.querySelector('.jbw-model').value,
+          serial: row.querySelector('.jbw-serial').value,
+          warranty_start_year: parseInt(startYear.value),
+          warranty_length_years: parseInt(length.value)
+        };
+        if(file) payload.certificate_url = await uploadCertificate(file, 'jb_warranty');
+        const { error } = await db.from('jb_warranty_clients').update(payload).eq('id', editState.jbwarranty);
+        if(error) throw error;
+        editState.jbwarranty = null;
+      } else {
+        for(const row of equipmentRows){
+          const equipment = row.querySelector('.jbw-equipment').value;
+          const model = row.querySelector('.jbw-model').value;
+          const serial = row.querySelector('.jbw-serial').value;
+          const file = row.querySelector('.jbw-certificate').files[0];
+          const certificate_url = await uploadCertificate(file, 'jb_warranty');
+          const { error } = await db.from('jb_warranty_clients').insert({
+            customer_id, equipment, model, serial,
+            warranty_start_year: parseInt(startYear.value),
+            warranty_length_years: parseInt(length.value),
+            certificate_url
+          });
+          if(error) throw error;
         }
       }
-      f.reset(); document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i)=>{if(i>0)r.remove();});
-      closeModal('jbwarranty'); showToast('JB warranty saved'); await loadJbwarranty();
-    }catch(err){alert(err.message);} return false;
+      f.reset();
+      document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
+      document.querySelectorAll('#jbwarranty-equipment-rows .cert-current').forEach(d => d.innerHTML = '');
+      closeModal('jbwarranty'); showToast('Client saved'); await loadJbwarranty();
+    } catch(err){ alert(err.message); }
+    return false;
   }
+
   function editJbwarranty(id){
-    const row=findCached('jbwarranty',id); if(!row)return; editState.jbwarranty=id;
-    document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i)=>{if(i>0)r.remove();});
-    setProfileValues('jbwarranty',row.customers||{});
-    document.querySelector('#jbwarranty-equipment-rows .jbw-equipment').value=row.equipment||''; document.querySelector('#jbwarranty-equipment-rows .jbw-model').value=row.model||''; document.querySelector('#jbwarranty-equipment-rows .jbw-serial').value=row.serial||'';
-    document.getElementById('jbwarranty-startyear').value=row.warranty_start_year||''; document.getElementById('jbwarranty-length').value=row.warranty_length_years||'';
-    document.querySelector('#jbwarranty-equipment-rows .cert-current').innerHTML=row.certificate_url?`<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);font-size:12px;">View current certificate</a>`:'';
-    const h3=document.querySelector('#modal-jbwarranty .modal-head h3'); if(h3)h3.textContent='Edit JB warranty client'; const btn=document.querySelector('#modal-jbwarranty button[type=submit]'); if(btn)btn.textContent='Save changes'; openModal('jbwarranty');
+    const row = findCached('jbwarranty', id);
+    if(!row) return;
+    editState.jbwarranty = id;
+    document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
+    document.getElementById('jbwarranty-customer').value = custName(row);
+    document.getElementById('jbwarranty-email').value = (row.customers && row.customers.email) || '';
+    document.querySelector('.jbw-equipment').value = row.equipment || '';
+    document.querySelector('.jbw-model').value = row.model || '';
+    document.querySelector('.jbw-serial').value = row.serial || '';
+    document.getElementById('jbwarranty-startyear').value = row.warranty_start_year || '';
+    document.getElementById('jbwarranty-length').value = row.warranty_length_years || '';
+    const certDiv = document.querySelector('#jbwarranty-equipment-rows .cert-current');
+    certDiv.innerHTML = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);font-size:12px;">View current certificate</a>` : '';
+    const h3 = document.querySelector('#modal-jbwarranty .modal-head h3');
+    if(h3) h3.textContent = 'Edit JB warranty client';
+    const btn = document.querySelector('#modal-jbwarranty button[type=submit]');
+    if(btn) btn.textContent = 'Save changes';
+    openModal('jbwarranty');
+    setTimeout(wireWarrantyLookup, 0);
   }
 
   async function submitServiceplan(e){
