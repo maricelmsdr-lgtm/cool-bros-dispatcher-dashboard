@@ -563,7 +563,7 @@
       </div>
       <div class="table-scroll">
 <table class="data" id="table-dispatch">
-        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Scheduled</th><th>Confidence</th><th>Status</th><th>Actions</th></tr>
+        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Scheduled</th><th>Invoice due</th><th>Invoice status</th><th>Status</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -870,26 +870,35 @@
     <div class="modal-head"><h3 data-add-label="Assign job">Assign job</h3><button class="modal-close" onclick="closeModal('dispatch')">&times;</button></div>
     <form onsubmit="return submitDispatch(event)">
       <div class="field-row">
+        <div class="field"><label>Job number</label><input type="number" id="dispatch-job-number" min="1" placeholder="Auto-assigned if left blank"></div>
         <div class="field"><label>Technician</label>
           <input type="text" id="dispatch-tech-input" list="tech-list" placeholder="Type or select technician" required>
           <datalist id="tech-list"></datalist>
         </div>
-        <div class="field"><label>Customer name</label><input type="text" id="dispatch-customer" required></div>
       </div>
       <div class="field-row">
+        <div class="field"><label>Customer name</label><input type="text" id="dispatch-customer" required></div>
         <div class="field"><label>Job type</label>
           <select id="dispatch-jobtype"><option>Repair</option><option>Maintenance</option><option>Install</option><option>Warranty</option></select>
         </div>
-        <div class="field"><label>Time</label><input type="time" id="dispatch-time" required></div>
       </div>
       <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="dispatch-time" required></div>
         <div class="field"><label>Scheduled date</label><input type="date" id="dispatch-scheduled-date" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Invoice due</label><input type="date" id="dispatch-invoice-due"></div>
+        <div class="field"><label>Invoice status</label>
+          <select id="dispatch-invoice-status"><option>Not Invoiced</option><option>Unpaid</option><option>For Follow-up</option><option>Paid</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Status</label>
+          <select id="dispatch-status"><option>Scheduled</option><option>En route</option><option>Waiting</option><option>Completed</option></select>
+        </div>
         <div class="field"><label>Schedule confidence</label>
           <select id="dispatch-confidence"><option>Firm</option><option>Tentative</option><option>Unscheduled</option></select>
         </div>
-      </div>
-      <div class="field"><label>Status</label>
-        <select id="dispatch-status"><option>Scheduled</option><option>En route</option><option>Waiting</option><option>Completed</option></select>
       </div>
       <div class="field"><label>Description</label><textarea id="dispatch-description" placeholder="Job details, what needs to be done..."></textarea></div>
       <div class="modal-actions">
@@ -1465,6 +1474,10 @@ Cool Bros Heating & Air Conditioning`;
     const cls = {'Firm':'paid','Tentative':'pending','Unscheduled':'unpaid'}[v] || 'scheduled';
     return pillSpan(v || '—', cls);
   }
+  function invoiceStatusPill(v){
+    const cls = {'Paid':'paid','Unpaid':'unpaid','For Follow-up':'waiting','Not Invoiced':'scheduled'}[v] || 'scheduled';
+    return pillSpan(v || 'Not Invoiced', cls);
+  }
 
   async function loadDashboardOverview(){
     const today = new Date().toISOString().slice(0,10);
@@ -1535,7 +1548,7 @@ Cool Bros Heating & Air Conditioning`;
     rowCache.jobs = data || [];
     clearRows('table-dispatch');
     (data||[]).forEach(row => {
-      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}</td><td>${confidencePill(row.schedule_confidence)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
+      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}</td><td class="mono">${row.invoice_due_date ? fmtDate(row.invoice_due_date) : '—'}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
       document.getElementById('table-dispatch').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -2173,16 +2186,23 @@ Cool Bros Heating & Air Conditioning`;
     const description = document.getElementById('dispatch-description');
     const scheduled_date = document.getElementById('dispatch-scheduled-date').value || new Date().toISOString().slice(0,10);
     const schedule_confidence = document.getElementById('dispatch-confidence').value;
+    const job_number = document.getElementById('dispatch-job-number').value;
+    const invoice_due_date = document.getElementById('dispatch-invoice-due').value;
+    const invoice_status = document.getElementById('dispatch-invoice-status').value;
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, schedule_confidence, description: description.value || null };
+      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, schedule_confidence, description: description.value || null, invoice_due_date: invoice_due_date || null, invoice_status };
+      if(job_number) payload.job_number = parseInt(job_number);
       let error;
       if(editState.dispatch){
         ({ error } = await db.from('jobs').update(payload).eq('id', editState.dispatch));
       } else {
         ({ error } = await db.from('jobs').insert(payload));
       }
-      if(error) throw error;
+      if(error){
+        if(/invoice_due|invoice_status/i.test(error.message||'')) throw new Error('Your Supabase database needs invoice_due_date / invoice_status columns added to the jobs table. Run the migration, then save again.');
+        throw error;
+      }
       editState.dispatch = null;
       f.reset(); closeModal('dispatch'); showToast('Job saved'); await loadDispatch();
     } catch(err){ alert(err.message); }
@@ -2200,6 +2220,9 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('dispatch-description').value = row.description || '';
     document.getElementById('dispatch-scheduled-date').value = row.scheduled_date || new Date().toISOString().slice(0,10);
     document.getElementById('dispatch-confidence').value = row.schedule_confidence || 'Firm';
+    document.getElementById('dispatch-job-number').value = row.job_number || '';
+    document.getElementById('dispatch-invoice-due').value = row.invoice_due_date || '';
+    document.getElementById('dispatch-invoice-status').value = row.invoice_status || 'Not Invoiced';
     const h3 = document.querySelector('#modal-dispatch .modal-head h3');
     if(h3) h3.textContent = 'Edit job';
     const btn = document.querySelector('#modal-dispatch button[type=submit]');
