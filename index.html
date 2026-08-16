@@ -872,6 +872,21 @@
         <div><h2 id="report-title">Daily report</h2><div class="module-sub" id="report-sub">Compiled from all tracked areas</div></div>
         <button class="btn btn-primary" id="report-save-btn" onclick="saveDailyReport()">Save &amp; send to boss</button>
       </div>
+      <div class="callfilter-presets" style="margin-bottom:10px;">
+        <button type="button" class="chip report-mode-btn active" data-mode="day" onclick="setReportMode('day')">Daily</button>
+        <button type="button" class="chip report-mode-btn" data-mode="week" onclick="setReportMode('week')">Weekly</button>
+        <button type="button" class="chip report-mode-btn" data-mode="month" onclick="setReportMode('month')">Monthly</button>
+      </div>
+      <div class="callfilter-bar">
+        <button type="button" class="chip" id="report-prev-btn" onclick="reportShiftWindow(-1)"></button>
+        <button type="button" class="chip" id="report-next-btn" onclick="reportShiftWindow(1)"></button>
+        <button type="button" class="chip" id="report-today-btn" onclick="reportJumpToday()"></button>
+        <div class="callfilter-range">
+          <span id="report-jump-label">Jump to date</span>
+          <input type="date" id="report-jump-date" onchange="reportJumpToDate()">
+        </div>
+      </div>
+      <div class="callfilter-label" id="report-range-label"></div>
       <div id="report-body">
         <div class="report-block"><h3>Loading…</h3></div>
       </div>
@@ -3238,16 +3253,22 @@ Cool Bros Heating & Air Conditioning`;
   }
 
   // ---------- DAILY REPORT ----------
-  async function computeLiveReport(){
-    const today = new Date().toISOString().slice(0,10);
+  // Everything below is scoped to a date range: jobs/estimates/etc. are counted
+  // by the date they were scheduled/created/logged, not by "current status".
+  // That's what makes a Monday report different from a Friday report.
+  let reportViewMode = 'day'; // 'day' | 'week' | 'month'
+  let reportAnchorStart = null; // start date of the period being viewed; null = current period
+
+  async function computeReportForRange(startStr, endStr){
+    const endTs = endStr + 'T23:59:59';
     const [jobs, calls, callbacks, installs, warranty, estimates, leads] = await Promise.all([
-      db.from('jobs').select('status, job_type, invoice_amount, invoice_status', {count:'exact'}),
-      db.from('call_log').select('outcome'),
-      db.from('callbacks').select('status'),
-      db.from('installations').select('id').eq('install_date', today),
-      db.from('warranty_claims').select('status'),
-      db.from('estimates').select('status'),
-      db.from('leads').select('status')
+      db.from('jobs').select('status, job_type, invoice_amount, invoice_status').gte('scheduled_date', startStr).lte('scheduled_date', endStr),
+      db.from('call_log').select('outcome').gte('call_time', startStr).lte('call_time', endTs),
+      db.from('callbacks').select('status').gte('created_at', startStr).lte('created_at', endTs),
+      db.from('installations').select('id').gte('install_date', startStr).lte('install_date', endStr),
+      db.from('warranty_claims').select('status').gte('created_at', startStr).lte('created_at', endTs),
+      db.from('estimates').select('status').gte('estimate_date', startStr).lte('estimate_date', endStr),
+      db.from('leads').select('status').gte('created_at', startStr).lte('created_at', endTs)
     ]);
     const jobsData = jobs.data || [];
     const missed_calls = (calls.data||[]).filter(c => c.outcome === 'Missed').length;
@@ -3269,6 +3290,8 @@ Cool Bros Heating & Air Conditioning`;
     jobTypes.forEach(t => { jobs_by_type[t] = jobsData.filter(j => j.job_type === t && j.status === 'Completed').length; });
 
     return {
+      period_start: startStr,
+      period_end: endStr,
       jobs_total: jobsData.length,
       jobs_completed: jobsData.filter(j => j.status === 'Completed').length,
       jobs_pending: jobsData.filter(j => j.status !== 'Completed').length,
@@ -3308,7 +3331,7 @@ Cool Bros Heating & Air Conditioning`;
   // ranked so the dispatcher and the boss both see the same priority order.
   function reportFlags(r){
     const flags = [];
-    if(r.jobs_pending)       flags.push({n:r.jobs_pending,       label: r.jobs_pending === 1 ? 'job still open today' : 'jobs still open today', view:'dispatch'});
+    if(r.jobs_pending)       flags.push({n:r.jobs_pending,       label: r.jobs_pending === 1 ? 'job still open' : 'jobs still open', view:'dispatch'});
     if(r.missed_calls)       flags.push({n:r.missed_calls,       label: r.missed_calls === 1 ? 'missed call' : 'missed calls', view:'calls'});
     if(r.callbacks_pending)  flags.push({n:r.callbacks_pending,  label: 'callbacks pending', view:'callbacks'});
     if(r.unpaid_invoices)    flags.push({n:r.unpaid_invoices,    label: 'unpaid invoices', view:'invoices'});
@@ -3317,7 +3340,28 @@ Cool Bros Heating & Air Conditioning`;
     return flags.sort((a,b) => b.n - a.n);
   }
 
-  function renderReportBlocks(r, editable){
+  function renderReportNotesBlock(mode, editable, currentNotes, notesList){
+    if(editable){
+      return `<div class="report-block">
+        <h3>Notes for your boss</h3>
+        <textarea class="report-notes-input" id="report-notes-input" placeholder="Anything unusual today — escalations, a technician out sick, a big job that came in, etc.">${reportEscapeHtml(currentNotes)}</textarea>
+        <div class="report-notes-hint">Saved when you click "Save &amp; send to boss".</div>
+      </div>`;
+    }
+    if(mode === 'day'){
+      return `<div class="report-block">
+        <h3>Notes</h3>
+        <div class="report-line"><span>${currentNotes ? reportEscapeHtml(currentNotes) : 'No notes for this report.'}</span><span></span></div>
+      </div>`;
+    }
+    const rows = (notesList||[]).filter(n => n.notes && n.notes.trim());
+    const body = rows.length
+      ? rows.map(n => `<div class="report-line"><span>${fmtDate(n.report_date)}</span><span style="text-align:left; flex:1; margin-left:14px; font-family:'Inter',sans-serif; color:var(--text);">${reportEscapeHtml(n.notes)}</span></div>`).join('')
+      : `<div class="report-line"><span>No notes saved for this period.</span><span></span></div>`;
+    return `<div class="report-block"><h3>Notes from dispatch this period</h3>${body}</div>`;
+  }
+
+  function renderReportBlocks(r, editable, mode, currentNotes, notesList){
     const jobsByType = r.jobs_by_type || {};
     const jobTypes = ['Repair','Maintenance','Install','Warranty'];
     const maxType = Math.max(1, ...jobTypes.map(t => jobsByType[t] ?? 0));
@@ -3332,9 +3376,10 @@ Cool Bros Heating & Air Conditioning`;
     const rate = total > 0 ? Math.round((completed / total) * 100) : null;
     const flags = reportFlags(r);
 
+    const periodNoun = mode === 'day' ? 'today' : 'this period';
     const headline = total === 0
-      ? 'No jobs logged yet today.'
-      : `<span class="rate">${completed} of ${total} jobs completed (${rate}%)</span>` + (flags.length ? ' today.' : ' — nothing else needs attention.');
+      ? `No jobs scheduled ${periodNoun}.`
+      : `<span class="rate">${completed} of ${total} jobs completed (${rate}%)</span>` + (flags.length ? ` ${periodNoun}.` : ' — nothing else needs attention.');
 
     const attentionHtml = flags.length ? `
       <div class="report-section-title"><span class="pulse" style="display:inline-block; vertical-align:middle; margin-right:6px;"></span>Needs attention</div>
@@ -3342,16 +3387,7 @@ Cool Bros Heating & Air Conditioning`;
         ${flags.map(f => `<div class="attn-row"${editable ? ` onclick="goTo('${f.view}')"` : ''}><span class="n">${f.n}</span><span class="lbl">${f.label}</span>${editable ? '<span class="go">view →</span>' : ''}</div>`).join('')}
       </div>` : `<div class="report-allclear">✅ All caught up — no open jobs, missed calls, or pending items.</div>`;
 
-    const notesHtml = editable
-      ? `<div class="report-block">
-           <h3>Notes for your boss</h3>
-           <textarea class="report-notes-input" id="report-notes-input" placeholder="Anything unusual today — escalations, a technician out sick, a big job that came in, etc.">${reportEscapeHtml(r.notes)}</textarea>
-           <div class="report-notes-hint">Saved when you click "Save &amp; send to boss".</div>
-         </div>`
-      : `<div class="report-block">
-           <h3>Notes</h3>
-           <div class="report-line"><span>${r.notes ? reportEscapeHtml(r.notes) : 'No notes for this report.'}</span><span></span></div>
-         </div>`;
+    const notesHtml = renderReportNotesBlock(mode, editable, currentNotes, notesList);
 
     return `
       <div class="report-headline">${headline}</div>
@@ -3402,32 +3438,108 @@ Cool Bros Heating & Air Conditioning`;
     `;
   }
 
+  const REPORT_MODE_TEXT = {
+    day:   { unit: 'day',   label: 'Daily report' },
+    week:  { unit: 'week',  label: 'Weekly report' },
+    month: { unit: 'month', label: 'Monthly report' }
+  };
+
+  function reportPeriodRange(){
+    const start = reportAnchorStart || currentPeriodStart(reportViewMode);
+    return { start, end: periodEndFor(reportViewMode, start) };
+  }
+
+  function updateReportNavLabels(){
+    const t = REPORT_MODE_TEXT[reportViewMode];
+    document.getElementById('report-prev-btn').textContent = `‹ Previous ${t.unit}`;
+    document.getElementById('report-next-btn').textContent = `Next ${t.unit} ›`;
+    document.getElementById('report-today-btn').textContent = reportViewMode === 'day' ? 'Today' : `This ${t.unit}`;
+    document.getElementById('report-jump-label').textContent = `Jump to ${t.unit} of`;
+  }
+
+  function setReportMode(mode){
+    if(reportViewMode === mode) return;
+    reportViewMode = mode;
+    reportAnchorStart = null;
+    const jumpEl = document.getElementById('report-jump-date');
+    if(jumpEl) jumpEl.value = '';
+    document.querySelectorAll('.report-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    updateReportNavLabels();
+    loadReport();
+  }
+
+  function reportShiftWindow(delta){
+    const base = reportAnchorStart || currentPeriodStart(reportViewMode);
+    const next = shiftPeriod(reportViewMode, base, delta);
+    reportAnchorStart = (next === currentPeriodStart(reportViewMode)) ? null : next;
+    loadReport();
+  }
+
+  function reportJumpToday(){
+    reportAnchorStart = null;
+    const jumpEl = document.getElementById('report-jump-date');
+    if(jumpEl) jumpEl.value = '';
+    loadReport();
+  }
+
+  function reportJumpToDate(){
+    const val = document.getElementById('report-jump-date').value;
+    if(!val) return;
+    const target = periodStartFor(reportViewMode, val);
+    reportAnchorStart = (target === currentPeriodStart(reportViewMode)) ? null : target;
+    loadReport();
+  }
+
+  let reportLoadSeq = 0;
+
   async function loadReport(){
+    const seq = ++reportLoadSeq;
     const body = document.getElementById('report-body');
-    if(currentRole === 'dispatcher'){
-      document.getElementById('report-title').textContent = 'Daily report — ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-      document.getElementById('report-sub').textContent = 'Live counts — click Save to send a snapshot to your boss';
-      const live = await computeLiveReport();
-      body.innerHTML = renderReportBlocks(live, true);
-      body.dataset.live = JSON.stringify(live);
-    } else {
-      document.getElementById('report-title').textContent = 'Daily report';
-      document.getElementById('report-sub').textContent = 'Most recent report from dispatch';
-      const { data } = await db.from('daily_reports').select('*').order('report_date', {ascending:false}).limit(1).maybeSingle();
-      if(!data){ body.innerHTML = '<div class="report-block"><h3>No report yet</h3></div>'; return; }
-      const merged = { ...data, ...(data.details_json || {}) };
-      document.getElementById('report-title').textContent = 'Daily report — ' + fmtDate(data.report_date);
-      body.innerHTML = renderReportBlocks(merged, false);
+    const mode = reportViewMode;
+    const { start, end } = reportPeriodRange();
+    const today = localISODate(new Date());
+    const isCurrentDayToday = (mode === 'day' && start === today);
+    const editable = (currentRole === 'dispatcher' && isCurrentDayToday);
+
+    document.getElementById('report-save-btn').style.display = editable ? '' : 'none';
+    updateReportNavLabels();
+    document.querySelectorAll('.report-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+
+    const rangeLabelEl = document.getElementById('report-range-label');
+    if(rangeLabelEl){
+      const startLabel = new Date(start + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      const endLabel = new Date(end + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      rangeLabelEl.textContent = (mode === 'day' ? startLabel : `${startLabel} — ${endLabel}`) + (reportAnchorStart ? '' : ' (current)');
     }
+
+    document.getElementById('report-title').textContent = REPORT_MODE_TEXT[mode].label + ' — ' + (mode === 'day'
+      ? new Date(start + 'T00:00:00').toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})
+      : new Date(start + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' – ' + new Date(end + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}));
+    document.getElementById('report-sub').textContent = editable
+      ? 'Live counts — click Save to send a snapshot to your boss'
+      : 'Recomputed from your records for this period';
+
+    const [live, notesRes] = await Promise.all([
+      computeReportForRange(start, end),
+      db.from('daily_reports').select('report_date, notes').gte('report_date', start).lte('report_date', end).order('report_date', {ascending:true})
+    ]);
+    if(seq !== reportLoadSeq) return; // a newer request already started — discard this stale result
+
+    const notesList = notesRes.data || [];
+    const savedToday = notesList.find(n => n.report_date === today);
+    const currentNotes = editable ? (savedToday ? savedToday.notes : '') : (mode === 'day' ? (notesList[0] ? notesList[0].notes : '') : '');
+
+    body.innerHTML = renderReportBlocks(live, editable, mode, currentNotes, notesList);
+    body.dataset.live = JSON.stringify(live);
   }
 
   async function saveDailyReport(){
     if(currentRole !== 'dispatcher') return;
     const body = document.getElementById('report-body');
-    const live = body.dataset.live ? JSON.parse(body.dataset.live) : await computeLiveReport();
+    const live = body.dataset.live ? JSON.parse(body.dataset.live) : await computeReportForRange(localISODate(new Date()), localISODate(new Date()));
     const notesEl = document.getElementById('report-notes-input');
     const notes = notesEl ? notesEl.value.trim() || null : null;
-    const today = new Date().toISOString().slice(0,10);
+    const today = localISODate(new Date());
     try{
       const { error } = await db.from('daily_reports').upsert({
         report_date: today,
@@ -3448,6 +3560,7 @@ Cool Bros Heating & Air Conditioning`;
         throw error;
       }
       showToast('Report saved — your boss can now see it');
+      loadReport();
     } catch(err){ alert(err.message); }
   }
 
