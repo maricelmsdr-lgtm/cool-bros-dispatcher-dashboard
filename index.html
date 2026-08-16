@@ -2,28 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Cool Bros — Dispatcher Command Center</title>
+<title>Cool Bros Corp — Dispatcher Command Center</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0E1A22;
-    --panel:#14232D;
-    --panel-2:#1B2D38;
-    --line:#243943;
-    --line-soft:#1C2E38;
-    --text:#E7F1F1;
-    --text-dim:#8FA6AC;
-    --text-faint:#5F757C;
-    --cyan:#4FD8C9;
-    --cyan-dim:#2C6E68;
+    --bg:#0F1724;
+    --panel:#151C2B;
+    --panel-2:#202A3D;
+    --line:#2C3850;
+    --line-soft:#222D40;
+    --text:#F4F7FB;
+    --text-dim:#A8B3C5;
+    --text-faint:#6F7D91;
+    --cyan:#0A9CE6;
+    --cyan-dim:#15577A;
     --amber:#F0A63A;
     --amber-dim:#6E4F1F;
-    --red:#E2665A;
-    --red-dim:#6B2E29;
-    --blue:#4FA3E3;
-    --green:#7BC67E;
+    --red:#E14B58;
+    --red-dim:#652B36;
+    --blue:#39B7EA;
+    --green:#66C49A;
     --radius:10px;
   }
   *{box-sizing:border-box;}
@@ -52,12 +52,16 @@
     margin-bottom:8px;
   }
   .brand-mark{
-    font-family:'Barlow Condensed',sans-serif;
-    font-weight:700;
-    font-size:22px;
-    letter-spacing:0.5px;
-    color:var(--text);
-    line-height:1.1;
+    display:flex;
+    align-items:center;
+    min-height:58px;
+  }
+  .brand-logo{
+    display:block;
+    width:178px;
+    height:auto;
+    max-width:100%;
+    object-fit:contain;
   }
   .brand-mark span{color:var(--cyan);}
   .brand-sub{
@@ -510,7 +514,179 @@
     display:none; background:var(--red-dim); color:#F4C9C4;
     border-radius:7px; padding:8px 11px; font-size:12.5px; margin-bottom:12px;
   }
+  .auth-brand{justify-content:center; margin-bottom:8px !important;}
+  .auth-brand .brand-logo{width:230px;}
+  @media (max-width:700px){
+    .sidebar{width:190px;}
+    .brand-logo{width:155px;}
+    .main{padding-left:20px; padding-right:20px;}
+  }
   .auth-error.show{display:block;}
+
+  /* ================================================================
+     COOL BROS CORP — POLISHED COMMAND CENTER THEME
+     ================================================================ */
+  :root{
+    --bg:#06101f;
+    --panel:#0b1a2d;
+    --panel-2:#10243b;
+    --line:#193452;
+    --line-soft:#142a43;
+    --text:#f5f8ff;
+    --text-dim:#9eb0c9;
+    --text-faint:#657d9b;
+    --cyan:#1598ff;
+    --cyan-dim:#0b5ea8;
+    --amber:#ffb21a;
+    --amber-dim:#5b4510;
+    --red:#ff4d4d;
+    --red-dim:#65232b;
+    --blue:#1598ff;
+    --green:#70c84d;
+    --purple:#8b4dff;
+    --magenta:#c94dff;
+    --radius:12px;
+  }
+  body{
+    background:
+      radial-gradient(circle at 74% 0%, rgba(21,152,255,.10), transparent 30%),
+      radial-gradient(circle at 42% 42%, rgba(139,77,255,.06), transparent 30%),
+      var(--bg);
+  }
+  .app{min-height:100vh;}
+  .sidebar{
+    width:340px;
+    background:linear-gradient(180deg,#071426 0%,#06101f 100%);
+    border-right:1px solid #17304d;
+    padding:0;
+    box-shadow:12px 0 40px rgba(0,0,0,.16);
+  }
+  .brand{
+    padding:22px 30px 24px;
+    min-height:126px;
+    display:flex;
+    align-items:center;
+    border-bottom:1px solid #17304d;
+    margin-bottom:0;
+    background:linear-gradient(180deg,rgba(11,29,50,.72),rgba(6,16,31,.55));
+  }
+  .brand-mark{min-height:0;width:100%;}
+  .brand-logo{width:280px;max-width:100%;}
+  .brand-sub{display:none;}
+  .nav{padding:18px 16px;}
+  .nav-item{
+    position:relative;
+    gap:14px;
+    min-height:48px;
+    padding:11px 16px;
+    margin-bottom:4px;
+    border:1px solid transparent;
+    border-radius:8px;
+    color:#d8e2f2;
+    font-size:15px;
+    font-weight:500;
+  }
+  .nav-item:before{
+    content:'';
+    width:18px;height:18px;flex:0 0 18px;
+    border:1.6px solid #5f7d9e;
+    border-radius:4px;
+    opacity:.9;
+  }
+  .nav-item:nth-child(1):before{border-radius:5px;box-shadow:0 0 0 1px rgba(21,152,255,.15);}
+  .nav-item:hover{background:rgba(21,152,255,.08);color:#fff;border-color:rgba(21,152,255,.08);}
+  .nav-item.active{
+    background:linear-gradient(90deg,rgba(21,152,255,.20),rgba(21,152,255,.07));
+    color:#fff;border-color:rgba(21,152,255,.08);
+    box-shadow:inset 3px 0 0 var(--cyan);
+  }
+  .nav-item.active:before{border-color:var(--cyan);box-shadow:0 0 10px rgba(21,152,255,.35);}
+  .nav-item .dot{display:none;}
+  .nav-item .count{
+    color:#dce8f8;
+    background:#15509a;
+    border-radius:999px;
+    min-width:30px;
+    text-align:center;
+    padding:4px 8px;
+    font-size:11px;
+  }
+  .nav-item.alert .count{background:#7d2731;color:#fff;}
+  .sidebar-foot{
+    padding:20px 30px 28px;
+    border-top:1px solid #17304d;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--text-dim);
+    min-height:104px;
+  }
+  .main{max-width:none;padding:30px 34px 38px;min-width:0;}
+  .topbar{margin-bottom:22px;align-items:center;}
+  .topbar h1{font-family:'Inter',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.4px;}
+  .topbar .date{font-size:13px;color:#91a6c1;}
+  .btn{background:#10243b;border-color:#21415f;border-radius:9px;}
+  .btn:hover{border-color:#287dc5;background:#13304d;}
+  .btn-primary{background:linear-gradient(135deg,#1598ff,#2873ff);color:#fff;box-shadow:0 7px 20px rgba(21,152,255,.20);}
+
+  /* Dashboard only */
+  #view-dashboard{max-width:100%;}
+  .cb-dashboard-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+  .cb-greeting h1{margin:0 0 5px;font-family:'Inter',sans-serif;font-size:23px;font-weight:700;letter-spacing:-.4px;}
+  .cb-greeting p{margin:0;color:#8fa4c0;font-size:14px;}
+  .cb-head-right{display:flex;align-items:center;gap:18px;color:#c5d2e4;}
+  .cb-datebox{display:flex;align-items:center;gap:10px;font-size:13px;}
+  .cb-datebox .day{display:block;color:#8096b3;font-size:12px;margin-top:2px;}
+  .cb-icon-circle{width:42px;height:42px;border:1px solid #1b4b78;border-radius:50%;display:grid;place-items:center;color:#5daeff;background:rgba(13,43,75,.55);}
+  .cb-avatar{width:46px;height:46px;border:1px solid #168cff;border-radius:50%;display:grid;place-items:center;color:#64b8ff;background:rgba(12,39,68,.7);font-weight:600;}
+  .cb-bell{position:relative;width:42px;height:42px;border:1px solid #284461;border-radius:50%;display:grid;place-items:center;background:#0d1d30;}
+  .cb-bell span{position:absolute;right:-2px;top:-4px;width:18px;height:18px;background:#ff4d4d;color:white;border-radius:50%;font-size:10px;display:grid;place-items:center;font-weight:700;}
+  .cb-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:22px;}
+  .cb-kpi{position:relative;overflow:hidden;min-height:120px;background:linear-gradient(180deg,rgba(13,31,53,.98),rgba(9,24,42,.98));border:1px solid #18334f;border-radius:10px;padding:18px 18px 15px;box-shadow:0 12px 28px rgba(0,0,0,.12);}
+  .cb-kpi:after{content:'';position:absolute;left:18px;right:18px;bottom:0;height:2px;background:var(--accent,var(--cyan));box-shadow:0 0 14px color-mix(in srgb,var(--accent,var(--cyan)) 45%,transparent);}
+  .cb-kpi .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;}
+  .cb-kpi .kpi-icon{width:28px;height:28px;color:var(--accent,var(--cyan));font-size:20px;}
+  .cb-kpi .kpi-label{font-size:11px;font-weight:700;color:#e4ebf6;text-transform:uppercase;letter-spacing:.2px;}
+  .cb-kpi .kpi-value{font-size:29px;line-height:1;font-weight:700;margin-bottom:5px;}
+  .cb-kpi .kpi-meta{font-size:11px;color:#8398b3;}
+  .cb-kpi.blue{--accent:#1598ff}.cb-kpi.purple{--accent:#a34dff}.cb-kpi.magenta{--accent:#c64dff}.cb-kpi.amber{--accent:#ffad17}.cb-kpi.red{--accent:#ff4d4d}
+  .cb-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-bottom:18px;}
+  .cb-widget{background:linear-gradient(180deg,rgba(12,29,50,.98),rgba(8,23,40,.98));border:1px solid #1a3653;border-radius:10px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.12);}
+  .cb-widget-head{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 14px;border-bottom:1px solid #17304b;}
+  .cb-widget-title{font-size:15px;font-weight:700;color:#f1f5fc;}
+  .cb-widget-title.blue{color:#1598ff}.cb-widget-title.amber{color:#ffb21a}.cb-widget-title.red{color:#ff4d4d}
+  .cb-view{color:#1598ff;font-size:12px;cursor:pointer;}
+  .cb-list{padding:0 20px;}
+  .cb-row{display:grid;grid-template-columns:72px 1fr auto;gap:16px;align-items:center;min-height:64px;border-bottom:1px solid #152d47;}
+  .cb-row:last-child{border-bottom:0;}
+  .cb-time{font-size:12px;color:#dce5f2;}
+  .cb-job strong{display:block;font-size:13px;margin-bottom:3px;}
+  .cb-job span{font-size:12px;color:#8fa5bf;}
+  .cb-tech{font-size:12px;color:#b9c8dc;text-align:right;}
+  .cb-status{display:inline-flex;margin-top:6px;padding:5px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px;background:rgba(21,152,255,.13);color:#5db5ff;border:1px solid rgba(21,152,255,.25);}
+  .cb-status.scheduled{background:rgba(139,77,255,.18);color:#c3a1ff;border-color:rgba(139,77,255,.25);}
+  .cb-pending-row{display:grid;grid-template-columns:12px 1fr auto;gap:12px;align-items:center;min-height:65px;border-bottom:1px solid #152d47;}
+  .cb-pending-row:last-child{border-bottom:0;}
+  .cb-dot{width:11px;height:11px;border-radius:50%;background:#ff8517;box-shadow:0 0 10px rgba(255,133,23,.25);}
+  .cb-pending-title{font-size:13px;font-weight:600;display:block;margin-bottom:3px;}
+  .cb-pending-meta{font-size:12px;color:#8da3bd;}
+  .cb-age{font-size:12px;color:#ffad17;white-space:nowrap;}
+  .cb-age.red{color:#ff5b5b;}
+  .cb-widget-foot{border-top:1px solid #17304b;padding:12px 20px;color:#1598ff;font-size:12px;cursor:pointer;}
+  .cb-bottom{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;}
+  .cb-call-body{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center;padding:20px;min-height:230px;}
+  .cb-donut{width:170px;height:170px;border-radius:50%;margin:auto;display:grid;place-items:center;background:conic-gradient(#1598ff 0 43%,#8b4dff 43% 72%,#ff8517 72% 89%,#70c84d 89% 100%);position:relative;}
+  .cb-donut:after{content:'';position:absolute;inset:31px;border-radius:50%;background:#0b1b2f;box-shadow:inset 0 0 20px rgba(0,0,0,.18);}
+  .cb-donut-center{position:relative;z-index:2;text-align:center;}.cb-donut-center strong{display:block;font-size:27px}.cb-donut-center span{font-size:11px;color:#90a6c1;}
+  .cb-legend{display:grid;gap:16px;}.cb-legend-item{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;font-size:12px;color:#d8e2f0}.cb-legend-dot{width:10px;height:10px;border-radius:50%}.cb-legend-dot.blue{background:#1598ff}.cb-legend-dot.purple{background:#8b4dff}.cb-legend-dot.orange{background:#ff8517}.cb-legend-dot.green{background:#70c84d}.cb-legend-item span:last-child{color:#c6d3e4;}
+  .cb-invoice-body{padding:20px;min-height:230px;display:grid;grid-template-columns:1fr 1.35fr;gap:18px;}
+  .cb-total{font-size:28px;font-weight:700;color:#ff4d4d;margin:2px 0 10px;}.cb-total-label{font-size:12px;color:#91a6bf;}
+  .cb-invoice-list{display:grid;gap:8px;align-content:start}.cb-invoice-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;font-size:12px;align-items:center}.cb-invoice-row .amount{color:#e7edf7}.cb-invoice-row .overdue{color:#ff4d4d}.cb-invoice-row .due{color:#1598ff}.cb-invoice-btn{display:inline-block;margin-top:18px;border:1px solid #1598ff;border-radius:7px;padding:9px 14px;color:#5db5ff;font-size:12px;cursor:pointer;}
+  .cb-dashboard-old{display:none!important;}
+  .cb-dashboard-footer{margin-top:18px;border-top:1px solid #17304b;padding:13px 4px;color:#6f88a6;font-size:11px;display:flex;justify-content:space-between;}
+  @media(max-width:1250px){.sidebar{width:270px}.cb-kpis{grid-template-columns:repeat(4,1fr)}.cb-grid,.cb-bottom{grid-template-columns:1fr}.main{padding:26px}.brand-logo{width:220px}}
+  @media(max-width:850px){.sidebar{width:220px}.main{padding:20px}.cb-kpis{grid-template-columns:repeat(2,1fr)}.cb-dashboard-head{align-items:flex-start}.cb-head-right{display:none}.cb-call-body,.cb-invoice-body{grid-template-columns:1fr}.cb-donut{width:150px;height:150px}}
+  @media(max-width:620px){.app{display:block}.sidebar{width:100%;min-height:auto}.nav{display:grid;grid-template-columns:repeat(2,1fr)}.sidebar-foot{display:none}.main{padding:16px}.cb-kpis{grid-template-columns:1fr}.cb-row{grid-template-columns:58px 1fr}.cb-tech{display:none}}
+
 </style>
 </head>
 <body>
@@ -518,8 +694,8 @@
 <!-- ============ AUTH SCREEN ============ -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-box">
-    <div class="brand-mark" style="margin-bottom:4px;">COOL <span>BROS</span></div>
-    <div class="brand-sub" style="margin-bottom:22px;">HVAC &mdash; Dispatcher Command Center</div>
+    <div class="brand-mark auth-brand" style="margin-bottom:4px;"><img class="brand-logo" src="cool-bros-logo.png" alt="Cool Bros Corp"></div>
+    <div class="brand-sub" style="margin-bottom:22px;">COOL BROS CORP &mdash; Dispatcher Command Center</div>
     <div id="auth-error" class="auth-error"></div>
     <button type="button" class="btn" id="ms-signin-btn" onclick="signInWithMicrosoft()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:18px;">
       <svg width="16" height="16" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
@@ -543,8 +719,8 @@
 
   <div class="sidebar">
     <div class="brand">
-      <div class="brand-mark">COOL <span>BROS</span></div>
-      <div class="brand-sub">HVAC</div>
+      <div class="brand-mark"><img class="brand-logo" src="cool-bros-logo.png" alt="Cool Bros Corp"></div>
+      <div class="brand-sub">COOL BROS CORP</div>
     </div>
     <ul class="nav" id="nav">
       <li class="nav-item active" data-view="dashboard"><span class="dot"></span>Dashboard</li>
@@ -575,41 +751,68 @@
 
     <!-- ============ DASHBOARD ============ -->
     <div class="view active" id="view-dashboard">
-      <div class="topbar">
-        <div>
-          <h1>Today</h1>
-          <div class="date" id="dash-date">—</div>
+      <div class="cb-dashboard-head">
+        <div class="cb-greeting">
+          <h1 id="dash-greeting">Good morning, Maricel! 👋</h1>
+          <p>Here's what's happening today.</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn" onclick="openEmailComposer()">✉ Send Email</button>
-          <button class="btn btn-primary" onclick="goTo('report')">Generate daily report</button>
+        <div class="cb-head-right">
+          <div class="cb-datebox"><span style="font-size:22px">▣</span><div><strong id="dash-date-short">—</strong><span class="day" id="dash-day">—</span></div></div>
+          <div class="cb-bell">♧<span>3</span></div>
+          <div class="cb-avatar" id="dash-avatar">MC</div>
         </div>
       </div>
 
-      <div class="stat-grid">
-        <div class="stat"><div class="stat-label">Jobs</div><div class="stat-value" id="dash-jobs">—</div></div>
-        <div class="stat"><div class="stat-label">Technicians</div><div class="stat-value" id="dash-technicians">—</div></div>
-        <div class="stat"><div class="stat-label">Calls</div><div class="stat-value" id="dash-calls">—</div></div>
-        <div class="stat"><div class="stat-label">New leads</div><div class="stat-value" id="dash-leads">—</div></div>
-        <div class="stat warn"><div class="stat-label">Pending</div><div class="stat-value" id="dash-pending">—</div></div>
-        <div class="stat warn"><div class="stat-label">Parts warranty open</div><div class="stat-value" id="dash-warranty">—</div></div>
-        <div class="stat warn"><div class="stat-label">Unpaid invoices</div><div class="stat-value" id="dash-unpaid">—</div></div>
+      <div class="cb-kpis">
+        <div class="cb-kpi blue"><div class="kpi-top"><span class="kpi-label">Jobs</span><span class="kpi-icon">▣</span></div><div class="kpi-value" id="dash-jobs">—</div><div class="kpi-meta">In Progress</div></div>
+        <div class="cb-kpi purple"><div class="kpi-top"><span class="kpi-label">Technicians</span><span class="kpi-icon">♙</span></div><div class="kpi-value" id="dash-technicians">—</div><div class="kpi-meta">On the Field</div></div>
+        <div class="cb-kpi blue"><div class="kpi-top"><span class="kpi-label">Calls</span><span class="kpi-icon">⌕</span></div><div class="kpi-value" id="dash-calls">—</div><div class="kpi-meta">Today</div></div>
+        <div class="cb-kpi magenta"><div class="kpi-top"><span class="kpi-label">New Leads</span><span class="kpi-icon">♧</span></div><div class="kpi-value" id="dash-leads">—</div><div class="kpi-meta">This Week</div></div>
+        <div class="cb-kpi amber"><div class="kpi-top"><span class="kpi-label">Pending</span><span class="kpi-icon">◷</span></div><div class="kpi-value" id="dash-pending">—</div><div class="kpi-meta">Follow Ups</div></div>
+        <div class="cb-kpi purple"><div class="kpi-top"><span class="kpi-label">Warranty</span><span class="kpi-icon">♢</span></div><div class="kpi-value" id="dash-warranty">—</div><div class="kpi-meta">Active</div></div>
+        <div class="cb-kpi red"><div class="kpi-top"><span class="kpi-label">Unpaid Invoices</span><span class="kpi-icon">▤</span></div><div class="kpi-value" id="dash-unpaid">—</div><div class="kpi-meta">Total</div></div>
       </div>
 
-      <div class="section-title"><span class="pulse"></span>Needs attention</div>
-      <div class="attention" id="dash-attention">
-        <div class="attn-row" onclick="goTo('dispatch')"><span class="n" id="dash-attn-jobs-n">0</span><span class="lbl">jobs need follow-up today</span><span class="go">view →</span></div>
-        <div class="attn-row" onclick="goTo('calls')"><span class="n" id="dash-attn-calls-n">0</span><span class="lbl">missed calls</span><span class="go">view →</span></div>
-        <div class="attn-row" onclick="goTo('leads')"><span class="n" id="dash-attn-leads-n">0</span><span class="lbl">leads need callbacks</span><span class="go">view →</span></div>
-        <div class="attn-row" id="dash-attn-debrief-row" onclick="goTo('debriefs')" style="display:none;"><span class="n" id="dash-attn-debrief-n">0</span><span class="lbl" id="dash-attn-debrief-lbl">technician debrief missing</span><span class="go">view →</span></div>
-        <div class="attn-row" onclick="goTo('warranty')"><span class="n" id="dash-attn-warranty-n">0</span><span class="lbl">warranty items pending</span><span class="go">view →</span></div>
+      <div class="cb-grid">
+        <section class="cb-widget">
+          <div class="cb-widget-head"><span class="cb-widget-title blue">TODAY'S SCHEDULE</span><span class="cb-view" onclick="goTo('dispatch')">View all jobs →</span></div>
+          <div class="cb-list" id="cb-schedule-list"><div class="cb-row"><div class="cb-time">—</div><div class="cb-job"><strong>Loading schedule…</strong><span>Please wait</span></div><div class="cb-tech">—</div></div></div>
+          <div class="cb-widget-foot" onclick="goTo('dispatch')">View full schedule&nbsp; →</div>
+        </section>
+
+        <section class="cb-widget">
+          <div class="cb-widget-head"><span class="cb-widget-title amber">PENDING ITEMS</span><span class="cb-view" onclick="goTo('dispatch')">View all →</span></div>
+          <div class="cb-list" id="cb-pending-list"><div class="cb-pending-row"><span class="cb-dot"></span><div><span class="cb-pending-title">Loading pending items…</span><span class="cb-pending-meta">Please wait</span></div><span class="cb-age">—</span></div></div>
+          <div class="cb-widget-foot" onclick="goTo('dispatch')">View all pending&nbsp; →</div>
+        </section>
       </div>
 
-      <div class="section-title">Today's dispatch</div>
-      <table class="dispatch">
-        <tr><th>Time</th><th>Tech</th><th>Job</th><th>Customer</th><th>Status</th></tr>
-        <tbody id="dash-dispatch-rows"></tbody>
-      </table>
+      <div class="cb-bottom">
+        <section class="cb-widget">
+          <div class="cb-widget-head"><span class="cb-widget-title blue">CALL LOG OVERVIEW</span><span class="cb-view" onclick="goTo('calls')">View all →</span></div>
+          <div class="cb-call-body">
+            <div class="cb-donut" id="cb-call-donut"><div class="cb-donut-center"><strong id="cb-call-total">—</strong><span>Total Calls</span></div></div>
+            <div class="cb-legend" id="cb-call-legend"></div>
+          </div>
+        </section>
+
+        <section class="cb-widget">
+          <div class="cb-widget-head"><span class="cb-widget-title red">UNPAID INVOICES</span><span class="cb-view" onclick="goTo('invoices')">View all</span></div>
+          <div class="cb-invoice-body">
+            <div><div class="cb-total" id="cb-invoice-total">$0.00</div><div class="cb-total-label">Total Outstanding</div><span class="cb-invoice-btn" onclick="goTo('invoices')">View all invoices</span></div>
+            <div class="cb-invoice-list" id="cb-invoice-list"><div class="cb-invoice-row"><span>Loading…</span><span class="amount">—</span><span class="due">—</span></div></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="cb-dashboard-footer"><span>© 2025 Cool Bros Corp. All rights reserved.</span><span>v1.0.0 &nbsp;&nbsp;&nbsp; Support ⓘ</span></div>
+
+      <!-- Legacy dashboard elements retained for existing JS compatibility. -->
+      <div class="cb-dashboard-old">
+        <div id="dash-attention"><span id="dash-attn-jobs-n">0</span><span id="dash-attn-calls-n">0</span><span id="dash-attn-leads-n">0</span><span id="dash-attn-debrief-n">0</span><span id="dash-attn-debrief-lbl"></span><span id="dash-attn-warranty-n">0</span></div>
+        <table class="dispatch"><tbody id="dash-dispatch-rows"></tbody></table>
+        <span id="dash-date">—</span><span id="dash-attn-debrief-row"></span>
+      </div>
     </div>
 
     <!-- ============ DISPATCH BOARD ============ -->
@@ -1731,10 +1934,10 @@
     const email = row.customers && row.customers.email ? row.customers.email.trim() : '';
     if(!email) return alert('This customer does not have an email address. Edit the warranty record and add the client email first.');
     const customerName = custName(row) === '—' ? 'Customer' : custName(row);
-    const subject = type === 'installation' ? 'Cool Bros — Installation Warranty Certificate' : 'Cool Bros — JB Warranty Certificate';
+    const subject = type === 'installation' ? 'Cool Bros Corp — Installation Warranty Certificate' : 'Cool Bros Corp — JB Warranty Certificate';
     const body = `Hi ${customerName},
 
-Thank you for choosing Cool Bros Heating & Air Conditioning.
+Thank you for choosing Cool Bros Corp.
 
 Please find your warranty certificate here:
 ${row.certificate_url}
@@ -1743,7 +1946,7 @@ Please keep this document for your records. If you have any questions, please co
 
 Thank you,
 Maricel
-Cool Bros Heating & Air Conditioning`;
+Cool Bros Corp`;
     openEmailComposer({to:email, subject, body});
   }
 
@@ -2273,8 +2476,8 @@ Cool Bros Heating & Air Conditioning`;
   function openTeamInviteEmail(email, role){
     const appUrl = window.location.origin + window.location.pathname;
     const roleLabel = role === 'boss' ? 'Boss' : 'Dispatcher';
-    const subject = "You're invited to Cool Bros Dispatcher Command Center";
-    const body = `Hi,\n\nYou've been invited to join the Cool Bros Dispatcher Command Center as a ${roleLabel}.\n\nTo get started:\n1. Go to ${appUrl}\n2. Click "Need an account? Sign up"\n3. Sign up using this exact email address: ${email}\n\nYour access will be set up automatically once you sign up.\n\nThanks!`;
+    const subject = "You're invited to Cool Bros Corp Dispatcher Command Center";
+    const body = `Hi,\n\nYou've been invited to join the Cool Bros Corp Dispatcher Command Center as a ${roleLabel}.\n\nTo get started:\n1. Go to ${appUrl}\n2. Click "Need an account? Sign up"\n3. Sign up using this exact email address: ${email}\n\nYour access will be set up automatically once you sign up.\n\nThanks!`;
     const params = new URLSearchParams();
     params.set('view','cm');
     params.set('fs','1');
@@ -2306,12 +2509,22 @@ Cool Bros Heating & Air Conditioning`;
 
   async function loadDashboardOverview(){
     const today = new Date().toISOString().slice(0,10);
-    const dateLabel = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    const now = new Date();
+    const dateLabel = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    const shortDate = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    const dayName = now.toLocaleDateString('en-US', { weekday:'long' });
     const who = currentFullName || currentUserEmail || '';
+    const firstName = (currentFullName || currentUserEmail || 'Dispatcher').split(/\s+/)[0];
+    const avatar = (currentFullName || currentUserEmail || 'CB').split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    const greet = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
     document.getElementById('dash-date').textContent = dateLabel + (who ? ' — dispatcher: ' + who : '');
+    document.getElementById('dash-date-short').textContent = shortDate;
+    document.getElementById('dash-day').textContent = dayName;
+    document.getElementById('dash-greeting').textContent = `${greet}, ${firstName}! 👋`;
+    document.getElementById('dash-avatar').textContent = avatar;
 
     const [jobsRes, callsRes, leadsRes, warrantyRes, debriefsRes] = await Promise.all([
-      db.from('jobs').select('*, customers(first_name,last_name)'),
+      db.from('jobs').select('*, customers(first_name,last_name,email)'),
       db.from('call_log').select('outcome'),
       db.from('leads').select('status'),
       db.from('warranty_claims').select('status'),
@@ -2324,12 +2537,14 @@ Cool Bros Heating & Air Conditioning`;
     const debriefs = debriefsRes.data || [];
 
     const technicians = Array.from(new Set(jobs.map(j => j.technician).filter(Boolean)));
-    const todaysJobs = jobs.filter(j => j.scheduled_date === today);
+    const todaysJobs = jobs.filter(j => j.scheduled_date === today).sort((a,b)=>(a.scheduled_time||'').localeCompare(b.scheduled_time||''));
     const jobsPending = jobs.filter(j => j.status !== 'Completed').length;
     const missedCalls = calls.filter(c => c.outcome === 'Missed').length;
     const leadsNeedCallback = leads.filter(l => l.status === 'Needs callback').length;
     const warrantyPending = warranty.filter(w => !['Credit Received','Closed','Denied'].includes(w.status)).length;
-    const unpaidInvoices = jobs.filter(j => Number(j.invoice_amount) > 0 && ['Unpaid','For Follow-up'].includes(j.invoice_status)).length;
+    const outstandingJobs = jobs.filter(j => Number(j.invoice_amount) > 0 && ['Unpaid','For Follow-up'].includes(j.invoice_status));
+    const unpaidInvoices = outstandingJobs.length;
+    const unpaidTotal = outstandingJobs.reduce((sum,j)=>sum + Number(j.invoice_amount||0),0);
     const todaysFollowUp = todaysJobs.filter(j => j.status !== 'Completed').length;
 
     document.getElementById('dash-jobs').textContent = jobs.length;
@@ -2352,17 +2567,64 @@ Cool Bros Heating & Air Conditioning`;
       debriefRow.style.display = '';
       document.getElementById('dash-attn-debrief-n').textContent = missingDebriefTechs.length;
       document.getElementById('dash-attn-debrief-lbl').textContent = 'technician debrief missing — ' + missingDebriefTechs.join(', ');
+    } else { debriefRow.style.display = 'none'; }
+
+    // Today's schedule widget
+    const schedule = document.getElementById('cb-schedule-list');
+    if(!todaysJobs.length){
+      schedule.innerHTML = '<div class="cb-row"><div class="cb-time">—</div><div class="cb-job"><strong>No jobs scheduled today</strong><span>Your schedule is clear.</span></div><div class="cb-tech">—</div></div>';
     } else {
-      debriefRow.style.display = 'none';
+      schedule.innerHTML = todaysJobs.slice(0,5).map(row=>{
+        const time = row.scheduled_time ? fmtTimeStr(row.scheduled_time) : '—';
+        const status = row.status || 'Scheduled';
+        const statusClass = /completed/i.test(status) ? '' : ' scheduled';
+        return `<div class="cb-row"><div class="cb-time">${time}</div><div class="cb-job"><strong>${escapeHtml(row.job_type || row.description || 'Service Job')}</strong><span>${escapeHtml(custName(row))}${row.address ? ' · '+escapeHtml(row.address) : ''}</span><span class="cb-status${statusClass}">${escapeHtml(status.toUpperCase())}</span></div><div class="cb-tech">${escapeHtml(row.technician||'Unassigned')}</div></div>`;
+      }).join('');
     }
 
+    // Pending items widget
+    const pending = [];
+    if(todaysFollowUp) pending.push({title:'Customer / Job Follow-Up',meta:`${todaysFollowUp} scheduled jobs still pending`,age:'Today',red:false});
+    if(missedCalls) pending.push({title:'Missed Calls',meta:`${missedCalls} call${missedCalls===1?'':'s'} need follow-up`,age:'Today',red:true});
+    if(leadsNeedCallback) pending.push({title:'Lead Callback',meta:`${leadsNeedCallback} lead${leadsNeedCallback===1?'':'s'} need callbacks`,age:'Today',red:false});
+    if(missingDebriefTechs.length) pending.push({title:'Technician Debrief',meta:`${missingDebriefTechs.length} technician${missingDebriefTechs.length===1?'':'s'} missing debrief`,age:'Today',red:false});
+    if(warrantyPending) pending.push({title:'Warranty Follow-Up',meta:`${warrantyPending} active warranty item${warrantyPending===1?'':'s'}`,age:'Open',red:false});
+    if(!pending.length) pending.push({title:'No urgent pending items',meta:'Everything is caught up.',age:'Clear',red:false});
+    document.getElementById('cb-pending-list').innerHTML = pending.slice(0,5).map(x=>`<div class="cb-pending-row"><span class="cb-dot"></span><div><span class="cb-pending-title">${escapeHtml(x.title)}</span><span class="cb-pending-meta">${escapeHtml(x.meta)}</span></div><span class="cb-age${x.red?' red':''}">${escapeHtml(x.age)}</span></div>`).join('');
+
+    // Call log donut + legend
+    const outcomes = [
+      ['New Calls', calls.filter(c=>['New','New Call'].includes(c.outcome)).length, 'blue'],
+      ['In Progress', calls.filter(c=>['In Progress','Open'].includes(c.outcome)).length, 'purple'],
+      ['Callbacks', calls.filter(c=>['Callback','Needs callback'].includes(c.outcome)).length, 'orange'],
+      ['Completed', calls.filter(c=>['Completed','Resolved'].includes(c.outcome)).length, 'green']
+    ];
+    const known = outcomes.reduce((s,x)=>s+x[1],0);
+    if(calls.length && known < calls.length) outcomes[1][1] += calls.length-known;
+    const totalCalls = calls.length;
+    let cursor=0;
+    const colors={blue:'#1598ff',purple:'#8b4dff',orange:'#ff8517',green:'#70c84d'};
+    const stops=outcomes.map(x=>{const start=cursor; cursor += totalCalls ? (x[1]/totalCalls)*100 : 0; return `${colors[x[2]]} ${start}% ${cursor}%`;}).join(',');
+    document.getElementById('cb-call-donut').style.background = totalCalls ? `conic-gradient(${stops})` : 'conic-gradient(#183452 0 100%)';
+    document.getElementById('cb-call-total').textContent = totalCalls;
+    document.getElementById('cb-call-legend').innerHTML = outcomes.map(x=>{
+      const pct=totalCalls?Math.round(x[1]/totalCalls*100):0;
+      return `<div class="cb-legend-item"><span class="cb-legend-dot ${x[2]}"></span><span>${x[0]}</span><span>${x[1]} (${pct}%)</span></div>`;
+    }).join('');
+
+    // Unpaid invoice widget
+    document.getElementById('cb-invoice-total').textContent = '$'+unpaidTotal.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('cb-invoice-list').innerHTML = outstandingJobs.slice(0,5).map(j=>{
+      const overdue = j.invoice_status === 'Unpaid';
+      return `<div class="cb-invoice-row"><span>${escapeHtml('INV-'+(j.job_number||'—'))}</span><span class="amount">$${Number(j.invoice_amount||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span><span class="${overdue?'overdue':'due'}">${overdue?'Overdue':'For Follow-up'}</span></div>`;
+    }).join('') || '<div class="cb-invoice-row"><span>No unpaid invoices</span><span class="amount">$0.00</span><span class="due">Clear</span></div>';
+
+    // Preserve the legacy table target for the existing dashboard logic.
     const tbody = document.getElementById('dash-dispatch-rows');
     if(todaysJobs.length === 0){
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-faint); padding:20px;">No jobs scheduled today</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">No jobs scheduled today</td></tr>';
     } else {
-      tbody.innerHTML = todaysJobs.map(row =>
-        `<tr><td class="time">—</td><td>${row.technician||'—'}</td><td class="mono">#${row.job_number}</td><td>${custName(row)}</td><td><span class="pill ${dispatchStatusClass(row.status)}">${row.status||'Scheduled'}</span></td></tr>`
-      ).join('');
+      tbody.innerHTML = todaysJobs.map(row => `<tr><td class="time">${row.scheduled_time ? fmtTimeStr(row.scheduled_time) : '—'}</td><td>${escapeHtml(row.technician||'—')}</td><td class="mono">#${escapeHtml(row.job_number||'—')}</td><td>${escapeHtml(custName(row))}</td><td><span class="pill ${dispatchStatusClass(row.status)}">${escapeHtml(row.status||'Scheduled')}</span></td></tr>`).join('');
     }
   }
 
@@ -3359,8 +3621,8 @@ Cool Bros Heating & Air Conditioning`;
     const email = row.customers?.email || '';
     if(!email) return alert('Please add the client email address first.');
     const name = custName(row) === '—' ? 'Customer' : custName(row);
-    const subject = `Cool Bros — ${row.brand||''} Equipment & JB Warranty Certificate`.replace('  ',' ');
-    const body = `Hi ${name},\n\nThank you for choosing Cool Bros Heating & Air Conditioning.\n\nPlease find your equipment and JB warranty document here:\n${row.certificate_url}\n\nEquipment: ${row.equipment||'—'}\nModel: ${row.model||'—'}\nSerial: ${row.serial||'—'}\nInstallation Date: ${fmtDate(row.install_date)}\n\nPlease keep this document for your records. If you have any questions, please contact us.\n\nThank you,\nMaricel\nCool Bros Heating & Air Conditioning`;
+    const subject = `Cool Bros Corp — ${row.brand||''} Equipment & JB Warranty Certificate`.replace('  ',' ');
+    const body = `Hi ${name},\n\nThank you for choosing Cool Bros Corp.\n\nPlease find your equipment and JB warranty document here:\n${row.certificate_url}\n\nEquipment: ${row.equipment||'—'}\nModel: ${row.model||'—'}\nSerial: ${row.serial||'—'}\nInstallation Date: ${fmtDate(row.install_date)}\n\nPlease keep this document for your records. If you have any questions, please contact us.\n\nThank you,\nMaricel\nCool Bros Corp`;
     openEmailComposer({to:email,subject,body});
   }
 
