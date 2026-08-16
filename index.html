@@ -514,7 +514,7 @@
       <li class="nav-item" data-view="estimates"><span class="dot"></span>Estimates</li>
       <li class="nav-item" data-view="callbacks"><span class="dot"></span>Callbacks</li>
       <li class="nav-item" data-view="equipmentjb"><span class="dot"></span>Equipment &amp; JB Warranty</li>
-      <li class="nav-item" data-view="warranty"><span class="dot"></span>Warranty &amp; parts</li>
+      <li class="nav-item" data-view="warranty"><span class="dot"></span>Parts Warranty</li>
       
       <li class="nav-item" data-view="serviceplans"><span class="dot"></span>Service plans</li>
       <li class="nav-item" data-view="invoices"><span class="dot"></span>Invoices</li>
@@ -549,7 +549,7 @@
         <div class="stat"><div class="stat-label">Calls</div><div class="stat-value" id="dash-calls">—</div></div>
         <div class="stat"><div class="stat-label">New leads</div><div class="stat-value" id="dash-leads">—</div></div>
         <div class="stat warn"><div class="stat-label">Pending</div><div class="stat-value" id="dash-pending">—</div></div>
-        <div class="stat warn"><div class="stat-label">Warranty</div><div class="stat-value" id="dash-warranty">—</div></div>
+        <div class="stat warn"><div class="stat-label">Parts warranty open</div><div class="stat-value" id="dash-warranty">—</div></div>
         <div class="stat warn"><div class="stat-label">Unpaid invoices</div><div class="stat-value" id="dash-unpaid">—</div></div>
       </div>
 
@@ -750,6 +750,36 @@
       </div>
     </div>
 
+    <!-- ============ PARTS WARRANTY ============ -->
+    <div class="view" id="view-warranty">
+      <div class="module-head">
+        <div><h2>Parts Warranty</h2><div class="module-sub">Track failed-part claims from diagnosis through manufacturer credit</div></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="downloadTableCSV('table-warranty','parts_warranty_backup.csv')">⬇ CSV</button>
+          <button class="btn" onclick="downloadTablePDF('table-warranty','parts_warranty_backup.pdf','Parts Warranty Claims')">⬇ PDF</button>
+          <button class="btn btn-primary" onclick="openModal('warranty', true)">+ Log parts claim</button>
+        </div>
+      </div>
+      <div class="callfilter-bar" id="warranty-presets">
+        <button type="button" class="chip active" data-preset="all" onclick="setWarrantyPreset('all')">All claims</button>
+        <button type="button" class="chip" data-preset="open" onclick="setWarrantyPreset('open')">Open</button>
+        <button type="button" class="chip" data-preset="Pending Diagnosis" onclick="setWarrantyPreset('Pending Diagnosis')">Pending diagnosis</button>
+        <button type="button" class="chip" data-preset="Submitted" onclick="setWarrantyPreset('Submitted')">Submitted</button>
+        <button type="button" class="chip" data-preset="Approved" onclick="setWarrantyPreset('Approved')">Approved</button>
+        <button type="button" class="chip" data-preset="Denied" onclick="setWarrantyPreset('Denied')">Denied</button>
+      </div>
+      <div class="callfilter-bar">
+        <input type="text" id="warranty-search" class="callfilter-search" style="margin-left:0; flex:1;" placeholder="Search customer, part, part #, claim #, manufacturer…" oninput="filterWarranty()">
+        <button type="button" class="btn" onclick="filterWarranty()">Search</button>
+        <button type="button" class="btn" onclick="clearWarrantySearch()">Clear</button>
+      </div>
+      <div class="table-scroll">
+<table class="data" id="table-warranty">
+        <tr><th>Customer</th><th>Job #</th><th>Part</th><th>Part #</th><th>Manufacturer</th><th>Failure date</th><th>Claim #</th><th>Submitted to</th><th>Status</th><th>Part cost</th><th>Credit amount</th><th>Photos</th><th>Actions</th></tr>
+      </table>
+      </div>
+    </div>
+
     <!-- ============ SERVICE PLANS ============ -->
     <div class="view" id="view-serviceplans">
       <div class="module-head">
@@ -896,23 +926,51 @@
 
 <div class="modal-backdrop" id="modal-warranty">
   <div class="modal">
-    <div class="modal-head"><h3 data-add-label="Log warranty item">Log warranty item</h3><button class="modal-close" onclick="closeModal('warranty')">&times;</button></div>
+    <div class="modal-head"><h3 data-add-label="Log parts warranty claim">Log parts warranty claim</h3><button class="modal-close" onclick="closeModal('warranty')">&times;</button></div>
     <form onsubmit="return submitWarranty(event)">
-      <div class="field"><label>Customer name</label><input type="text" id="warranty-customer" required></div>
       <div class="field-row">
-        <div class="field"><label>Part replaced</label><input type="text" id="warranty-part" required></div>
+        <div class="field"><label>Customer name</label><input type="text" id="warranty-customer" required></div>
         <div class="field"><label>Job #</label><input type="text" id="warranty-job" placeholder="#1029"></div>
       </div>
-      <div class="field"><label>Reason</label><input type="text" id="warranty-reason" placeholder="e.g. Failed under warranty" required></div>
-      <div class="field"><label>Status</label>
-        <select id="warranty-status"><option>Pending</option><option>Resolved</option></select>
+      <div class="field-row">
+        <div class="field"><label>Part description</label><input type="text" id="warranty-part" placeholder="e.g. Compressor, Condenser fan motor" required></div>
+        <div class="field"><label>Part number</label><input type="text" id="warranty-partnumber" placeholder="Manufacturer part #"></div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>Manufacturer</label><select id="warranty-brand"><option value="">Choose manufacturer</option><option>Mitsubishi</option><option>Daikin</option><option>American Standard</option><option>Amana</option><option>Fujitsu</option><option>Rheem</option><option>Other</option></select></div>
+        <div class="field"><label>Equipment serial number</label><input type="text" id="warranty-serial" placeholder="Unit this part came from"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Failure date</label><input type="date" id="warranty-failure-date"></div>
+        <div class="field"><label>Technician</label><input type="text" id="warranty-technician" placeholder="Who diagnosed / replaced it"></div>
+      </div>
+      <div class="field"><label>Failure reason / symptom</label><textarea id="warranty-reason" placeholder="What failed and how it was diagnosed" required></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Claim / RMA number</label><input type="text" id="warranty-claim-number" placeholder="Assigned by manufacturer or distributor"></div>
+        <div class="field"><label>Submitted to</label><input type="text" id="warranty-submitted-to" placeholder="Manufacturer or distributor name"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Claim status</label>
+          <select id="warranty-status"><option>Pending Diagnosis</option><option>Submitted</option><option>Approved</option><option>Denied</option><option>Credit Received</option><option>Closed</option></select>
+        </div>
+        <div class="field"><label>Claim submitted date</label><input type="date" id="warranty-submitted-date"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Part cost ($)</label><input type="number" step="0.01" min="0" placeholder="0.00" id="warranty-part-cost"></div>
+        <div class="field"><label>Credit amount ($)</label><input type="number" step="0.01" min="0" placeholder="0.00" id="warranty-credit-amount"></div>
+      </div>
+      <div class="field"><label>Photos of failed part</label>
+        <input type="file" id="warranty-photos" accept="image/*" multiple>
+        <div class="cert-current" id="warranty-existing-photos"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="warranty-notes" placeholder="Tracking numbers, follow-ups, adjuster notes..."></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('warranty')">Cancel</button>
-        <button type="submit" class="btn btn-primary" data-add-label="Save warranty item">Save warranty item</button>
+        <button type="submit" class="btn btn-primary" data-add-label="Log parts claim">Log parts claim</button>
       </div>
     </form>
   </div>
+</div>
 </div>
 
 <div class="modal-backdrop" id="modal-dispatch">
@@ -1217,6 +1275,11 @@
       if(name === 'equipmentjb'){
         eqjbEditingPhotoUrls = [];
         const existingWrap = document.getElementById('eqjb-existing-photos');
+        if(existingWrap) existingWrap.innerHTML = '';
+      }
+      if(name === 'warranty'){
+        warrantyEditingPhotoUrls = [];
+        const existingWrap = document.getElementById('warranty-existing-photos');
         if(existingWrap) existingWrap.innerHTML = '';
       }
       if(name === 'estimate'){
@@ -1598,7 +1661,7 @@ Cool Bros Heating & Air Conditioning`;
     const jobsPending = jobs.filter(j => j.status !== 'Completed').length;
     const missedCalls = calls.filter(c => c.outcome === 'Missed').length;
     const leadsNeedCallback = leads.filter(l => l.status === 'Needs callback').length;
-    const warrantyPending = warranty.filter(w => w.status === 'Pending').length;
+    const warrantyPending = warranty.filter(w => !['Credit Received','Closed','Denied'].includes(w.status)).length;
     const unpaidInvoices = invoices.filter(i => i.status === 'Unpaid').length;
     const todaysFollowUp = todaysJobs.filter(j => j.status !== 'Completed').length;
 
@@ -2253,15 +2316,88 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('eqjb-address').value = meta.address || '';
   }
 
+  const warrantyFilter = { preset: 'all', search: '' };
+
+  function warrantyStatusPill(v){
+    const cls = {'Pending Diagnosis':'pending','Submitted':'enroute','Approved':'paid','Denied':'unpaid','Credit Received':'completed','Closed':'scheduled'}[v] || 'pending';
+    return pillSpan(v || 'Pending Diagnosis', cls);
+  }
+
   async function loadWarranty(){
     const { data } = await db.from('warranty_claims').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
     rowCache.warranty = data || [];
+    renderWarranty();
+  }
+
+  function renderWarranty(){
     clearRows('table-warranty');
-    (data||[]).forEach(row => {
-      const statusCls = row.status === 'Resolved' ? 'paid' : 'waiting';
-      const html = `<tr><td>${custName(row)}</td><td>${row.part||'—'}</td><td>${row.notes||'—'}</td><td class="mono">${row.claim_number||'—'}</td><td>${pillSpan(row.status, statusCls)}</td><td><button class="btn-icon" onclick="editWarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('warranty_claims','${row.id}',loadWarranty)">Delete</button></td></tr>`;
+    const q = warrantyFilter.search.trim().toLowerCase();
+    const rows = (rowCache.warranty || []).filter(row => {
+      if(warrantyFilter.preset === 'open' && ['Credit Received','Closed','Denied'].includes(row.status)) return false;
+      if(!['all','open'].includes(warrantyFilter.preset) && row.status !== warrantyFilter.preset) return false;
+      if(!q) return true;
+      const haystack = [custName(row), row.part, row.part_number, row.brand, row.claim_number, row.submitted_to, row.notes].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+    if(!rows.length){
+      document.getElementById('table-warranty').insertAdjacentHTML('beforeend', `<tr><td colspan="13" style="text-align:center; color:var(--text-faint); padding:20px;">No matching parts warranty claims.</td></tr>`);
+      return;
+    }
+    rows.forEach(row => {
+      const photoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+      const photosHtml = photoUrls.length
+        ? photoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener" class="btn-icon" style="text-decoration:none;">📎 ${i+1}</a>`).join(' ')
+        : '<span style="color:var(--text-faint);">—</span>';
+      const html = `<tr><td>${custName(row)}</td><td class="mono">${row.job_number||'—'}</td><td>${row.part||'—'}</td><td class="mono">${row.part_number||'—'}</td><td>${row.brand||'—'}</td><td class="mono">${fmtDate(row.failure_date)}</td><td class="mono">${row.claim_number||'—'}</td><td>${row.submitted_to||'—'}</td><td>${warrantyStatusPill(row.status)}</td><td class="mono">${row.part_cost != null ? '$'+Number(row.part_cost).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td><td class="mono">${row.credit_amount != null ? '$'+Number(row.credit_amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td><td>${photosHtml}</td><td><button class="btn-icon" onclick="editWarranty('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('warranty_claims','${row.id}',loadWarranty)">Delete</button></td></tr>`;
       document.getElementById('table-warranty').insertAdjacentHTML('beforeend', html);
     });
+  }
+
+  function setWarrantyPreset(preset){
+    warrantyFilter.preset = preset;
+    document.querySelectorAll('#warranty-presets .chip').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+    renderWarranty();
+  }
+
+  function filterWarranty(){
+    warrantyFilter.search = document.getElementById('warranty-search').value;
+    renderWarranty();
+  }
+
+  function clearWarrantySearch(){
+    document.getElementById('warranty-search').value = '';
+    warrantyFilter.search = '';
+    renderWarranty();
+  }
+
+  // ---------- Parts warranty photos (photos of the failed part) ----------
+  let warrantyEditingPhotoUrls = [];
+
+  async function uploadWarrantyPhotos(files){
+    const urls = [];
+    for(const file of files){
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `warranty/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+      const { error } = await db.storage.from('debrief-photos').upload(path, file);
+      if(error) throw error;
+      const { data } = db.storage.from('debrief-photos').getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  }
+
+  function renderWarrantyExistingPhotos(){
+    const existingWrap = document.getElementById('warranty-existing-photos');
+    if(!existingWrap) return;
+    if(!warrantyEditingPhotoUrls.length){ existingWrap.innerHTML = ''; return; }
+    existingWrap.innerHTML = 'Already attached: ' + warrantyEditingPhotoUrls.map((u,i) =>
+      `<span style="display:inline-flex; align-items:center; gap:3px; margin-right:8px;"><a href="${u}" target="_blank" rel="noopener">Photo ${i+1}</a><button type="button" class="btn-icon" title="Remove this photo" onclick="removeWarrantyPhoto(${i})" style="padding:0 5px; line-height:1;">&times;</button></span>`
+    ).join('');
+  }
+
+  function removeWarrantyPhoto(index){
+    warrantyEditingPhotoUrls.splice(index, 1);
+    renderWarrantyExistingPhotos();
   }
 
   async function loadJbwarranty(){
@@ -2503,18 +2639,51 @@ Cool Bros Heating & Air Conditioning`;
     const job = document.getElementById('warranty-job');
     const reason = document.getElementById('warranty-reason');
     const status = document.getElementById('warranty-status');
+    const photoInput = document.getElementById('warranty-photos');
     try{
       const customer_id = await findOrCreateCustomer(customer.value);
-      const payload = { customer_id, part: part.value, claim_number: job.value || null, notes: reason.value, status: status.value };
+      let photo_urls = warrantyEditingPhotoUrls;
+      if(photoInput.files && photoInput.files.length){
+        const uploaded = await uploadWarrantyPhotos(Array.from(photoInput.files));
+        photo_urls = [...warrantyEditingPhotoUrls, ...uploaded];
+      }
+      const part_cost_raw = document.getElementById('warranty-part-cost').value;
+      const credit_amount_raw = document.getElementById('warranty-credit-amount').value;
+      const payload = {
+        customer_id,
+        job_number: job.value || null,
+        part: part.value,
+        part_number: document.getElementById('warranty-partnumber').value || null,
+        brand: document.getElementById('warranty-brand').value || null,
+        serial: document.getElementById('warranty-serial').value || null,
+        failure_date: document.getElementById('warranty-failure-date').value || null,
+        technician: document.getElementById('warranty-technician').value || null,
+        notes: reason.value,
+        claim_number: document.getElementById('warranty-claim-number').value || null,
+        submitted_to: document.getElementById('warranty-submitted-to').value || null,
+        submitted_date: document.getElementById('warranty-submitted-date').value || null,
+        status: status.value,
+        part_cost: part_cost_raw !== '' ? parseFloat(part_cost_raw) : null,
+        credit_amount: credit_amount_raw !== '' ? parseFloat(credit_amount_raw) : null,
+        photo_urls,
+        internal_notes: document.getElementById('warranty-notes').value || null
+      };
       let error;
       if(editState.warranty){
         ({ error } = await db.from('warranty_claims').update(payload).eq('id', editState.warranty));
       } else {
         ({ error } = await db.from('warranty_claims').insert(payload));
       }
-      if(error) throw error;
+      if(error){
+        if(/photo_urls/i.test(error.message||'')) throw new Error('Your Supabase database needs a photo_urls column (text array) added to the warranty_claims table. Run the migration, then save again.');
+        if(/part_number|brand|serial|failure_date|technician|submitted_to|submitted_date|part_cost|credit_amount|job_number|internal_notes/i.test(error.message||'')) throw new Error('Your Supabase database needs the Parts Warranty migration (new columns on warranty_claims). Run the SQL file included with this build, then save again.');
+        throw error;
+      }
       editState.warranty = null;
-      f.reset(); closeModal('warranty'); showToast('Warranty item saved'); await loadWarranty();
+      warrantyEditingPhotoUrls = [];
+      const existingWrap = document.getElementById('warranty-existing-photos');
+      if(existingWrap) existingWrap.innerHTML = '';
+      f.reset(); closeModal('warranty'); showToast('Parts warranty claim saved'); await loadWarranty();
     } catch(err){ alert(err.message); }
     return false;
   }
@@ -2524,12 +2693,25 @@ Cool Bros Heating & Air Conditioning`;
     if(!row) return;
     editState.warranty = id;
     document.getElementById('warranty-customer').value = custName(row);
+    document.getElementById('warranty-job').value = row.job_number || '';
     document.getElementById('warranty-part').value = row.part || '';
-    document.getElementById('warranty-job').value = row.claim_number || '';
+    document.getElementById('warranty-partnumber').value = row.part_number || '';
+    document.getElementById('warranty-brand').value = row.brand || '';
+    document.getElementById('warranty-serial').value = row.serial || '';
+    document.getElementById('warranty-failure-date').value = row.failure_date || '';
+    document.getElementById('warranty-technician').value = row.technician || '';
     document.getElementById('warranty-reason').value = row.notes || '';
-    document.getElementById('warranty-status').value = row.status || 'Pending';
+    document.getElementById('warranty-claim-number').value = row.claim_number || '';
+    document.getElementById('warranty-submitted-to').value = row.submitted_to || '';
+    document.getElementById('warranty-submitted-date').value = row.submitted_date || '';
+    document.getElementById('warranty-status').value = row.status || 'Pending Diagnosis';
+    document.getElementById('warranty-part-cost').value = row.part_cost ?? '';
+    document.getElementById('warranty-credit-amount').value = row.credit_amount ?? '';
+    document.getElementById('warranty-notes').value = row.internal_notes || '';
+    warrantyEditingPhotoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+    renderWarrantyExistingPhotos();
     const h3 = document.querySelector('#modal-warranty .modal-head h3');
-    if(h3) h3.textContent = 'Edit warranty item';
+    if(h3) h3.textContent = 'Edit parts warranty claim';
     const btn = document.querySelector('#modal-warranty button[type=submit]');
     if(btn) btn.textContent = 'Save changes';
     openModal('warranty');
@@ -2944,7 +3126,7 @@ Cool Bros Heating & Air Conditioning`;
     const jobsData = jobs.data || [];
     const missed_calls = (calls.data||[]).filter(c => c.outcome === 'Missed').length;
     const callbacks_pending = (callbacks.data||[]).filter(c => c.status === 'Pending').length;
-    const warranty_pending = (warranty.data||[]).filter(w => w.status === 'Pending').length;
+    const warranty_pending = (warranty.data||[]).filter(w => !['Credit Received','Closed','Denied'].includes(w.status)).length;
     const unpaid_invoices = (invoices.data||[]).filter(i => i.status === 'Unpaid').length;
 
     const estimatesData = estimates.data || [];
@@ -3001,7 +3183,7 @@ Cool Bros Heating & Air Conditioning`;
         <div class="stat warn"><div class="stat-label">Missed calls</div><div class="stat-value">${r.missed_calls ?? '—'}</div></div>
         <div class="stat warn"><div class="stat-label">Callbacks pending</div><div class="stat-value">${r.callbacks_pending ?? '—'}</div></div>
         <div class="stat"><div class="stat-label">Installs completed</div><div class="stat-value">${r.installations_completed ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Warranty pending</div><div class="stat-value">${r.warranty_pending ?? '—'}</div></div>
+        <div class="stat warn"><div class="stat-label">Parts warranty open</div><div class="stat-value">${r.warranty_pending ?? '—'}</div></div>
         <div class="stat warn"><div class="stat-label">Unpaid invoices</div><div class="stat-value">${r.unpaid_invoices ?? '—'}</div></div>
         <div class="stat"><div class="stat-label">Estimates created</div><div class="stat-value">${r.estimates_created ?? '—'}</div></div>
         <div class="stat"><div class="stat-label">Estimates won/approved</div><div class="stat-value">${r.estimates_approved ?? '—'}</div></div>
