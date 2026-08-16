@@ -519,6 +519,13 @@
     <div class="brand-mark" style="margin-bottom:4px;">COOL <span>BROS</span></div>
     <div class="brand-sub" style="margin-bottom:22px;">HVAC &mdash; Dispatcher Command Center</div>
     <div id="auth-error" class="auth-error"></div>
+    <button type="button" class="btn" id="ms-signin-btn" onclick="signInWithMicrosoft()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:18px;">
+      <svg width="16" height="16" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+      Sign in with Microsoft
+    </button>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px; color:var(--text-faint); font-size:11.5px;">
+      <div style="flex:1; height:1px; background:var(--line);"></div>or<div style="flex:1; height:1px; background:var(--line);"></div>
+    </div>
     <form id="auth-form" onsubmit="return handleAuth(event)">
       <div class="field"><label>Email</label><input type="email" id="auth-email" required></div>
       <div class="field"><label>Password</label><input type="password" id="auth-password" required minlength="6"></div>
@@ -943,7 +950,8 @@
             </div>
           </div>
         </form>
-        <div class="report-notes-hint">They'll need to sign up on the login screen using this exact email address — their role is assigned automatically the moment they do.</div>
+        <div class="report-notes-hint">This saves their role ahead of time. If they'll sign in with Microsoft, just have them click "Sign in with Microsoft" on the login screen using this exact work email — their role is applied automatically on first sign-in. The "Send invite" button also opens a pre-filled email as a backup way to notify them.</div>
+        <div class="report-notes-hint" style="margin-top:2px;">Pop-up blocked when clicking Send invite? Use "Resend email" next to their name in Pending invites below.</div>
         <div id="team-setup-notice" style="display:none; margin-top:10px; color:var(--amber); font-size:12.5px;"></div>
       </div>
 
@@ -1511,6 +1519,26 @@
     } catch(err){ /* non-critical, ignore */ }
   }
 
+  async function signInWithMicrosoft(){
+    const errBox = document.getElementById('auth-error');
+    errBox.classList.remove('show');
+    try{
+      // Supabase's provider id for Microsoft Entra ID is "azure" — this
+      // requires the Azure provider to be configured in Supabase first
+      // (see setup notes). redirectTo brings the user back to this same
+      // page after they authenticate with Microsoft.
+      const { error } = await db.auth.signInWithOAuth({
+        provider: 'azure',
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+      if(error) throw error;
+      // Browser is redirected to Microsoft here; nothing more to do.
+    } catch(err){
+      errBox.textContent = 'Microsoft sign-in isn\'t set up yet (' + (err.message || 'unknown error') + '). Use email/password below, or see the Entra setup notes.';
+      errBox.classList.add('show');
+    }
+  }
+
   async function handleAuth(e){
     e.preventDefault();
     const email = document.getElementById('auth-email').value.trim();
@@ -1751,7 +1779,6 @@ Cool Bros Heating & Air Conditioning`;
     const cls = {'Paid':'paid','Unpaid':'unpaid','For Follow-up':'waiting','Not Invoiced':'scheduled','No Charge':'completed'}[v] || 'scheduled';
     return pillSpan(v || 'Not Invoiced', cls);
   }
-
   // ---------- TEAM MANAGEMENT ----------
   // New logins can't be created from the browser without either hijacking the
   // admin's own session or exposing a service-role key, so this works as an
@@ -1804,7 +1831,10 @@ Cool Bros Heating & Air Conditioning`;
             <td>${reportEscapeHtml(inv.email)}</td>
             <td>${roleRolePill(inv.role)}</td>
             <td>${inv.invited_at ? fmtDate(inv.invited_at.slice(0,10)) : '—'}</td>
-            <td><button class="btn" onclick="cancelTeamInvite('${reportEscapeHtml(inv.email)}')">Cancel</button></td>
+            <td>
+              <button class="btn" onclick="openTeamInviteEmail('${reportEscapeHtml(inv.email)}', '${inv.role}')">Resend email</button>
+              <button class="btn" onclick="cancelTeamInvite('${reportEscapeHtml(inv.email)}')">Cancel</button>
+            </td>
           </tr>`).join('')
         : '<tr><td colspan="4" style="color:var(--text-faint);">No pending invites.</td></tr>');
     }
@@ -1820,12 +1850,31 @@ Cool Bros Heating & Air Conditioning`;
       }, { onConflict: 'email' });
       if(error) throw error;
       document.getElementById('team-invite-email').value = '';
-      showToast('Invite sent — have them sign up with that email');
+      showToast('Invite saved — opening an email to send them');
       loadTeam();
+      openTeamInviteEmail(email, role);
     } catch(err){
       alert(/relation .*team_invites.* does not exist/i.test(err.message||'') ? 'The "team_invites" table needs to be set up first — see the note below the invite form.' : err.message);
     }
     return false;
+  }
+
+  // Reuses the same Gmail-compose pattern as the Email center — this app has
+  // no backend mail server, so "sending" an invite means opening a pre-filled
+  // email for you to actually hit Send on.
+  function openTeamInviteEmail(email, role){
+    const appUrl = window.location.origin + window.location.pathname;
+    const roleLabel = role === 'boss' ? 'Boss' : 'Dispatcher';
+    const subject = "You're invited to Cool Bros Dispatcher Command Center";
+    const body = `Hi,\n\nYou've been invited to join the Cool Bros Dispatcher Command Center as a ${roleLabel}.\n\nTo get started:\n1. Go to ${appUrl}\n2. Click "Need an account? Sign up"\n3. Sign up using this exact email address: ${email}\n\nYour access will be set up automatically once you sign up.\n\nThanks!`;
+    const params = new URLSearchParams();
+    params.set('view','cm');
+    params.set('fs','1');
+    params.set('to', email);
+    params.set('su', subject);
+    params.set('body', body);
+    params.set('authuser','maricel@coolbrosco.com');
+    window.open('https://mail.google.com/mail/?'+params.toString(), '_blank', 'noopener,noreferrer');
   }
 
   async function cancelTeamInvite(email){
