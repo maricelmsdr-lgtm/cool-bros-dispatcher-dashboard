@@ -800,16 +800,35 @@
     <!-- ============ INVOICES ============ -->
     <div class="view" id="view-invoices">
       <div class="module-head">
-        <div><h2>Invoices — paid / unpaid</h2><div class="module-sub">Job billing status</div></div>
+        <div><h2>Invoicing &amp; Collections</h2><div class="module-sub">Every dispatched job with a billable amount — synced live from the Dispatch board</div></div>
         <div style="display:flex; gap:8px;">
           <button class="btn" onclick="downloadTableCSV('table-invoices','invoices_backup.csv')">⬇ CSV</button>
           <button class="btn" onclick="downloadTablePDF('table-invoices','invoices_backup.pdf','Invoices')">⬇ PDF</button>
-          <button class="btn btn-primary" onclick="openModal('invoice', true)">+ Add invoice</button>
         </div>
+      </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat warn"><div class="stat-label">Outstanding</div><div class="stat-value" id="inv-stat-outstanding">—</div></div>
+        <div class="stat warn"><div class="stat-label">90+ days overdue</div><div class="stat-value" id="inv-stat-overdue">—</div></div>
+        <div class="stat warn"><div class="stat-label">Ready to invoice</div><div class="stat-value" id="inv-stat-ready">—</div></div>
+        <div class="stat"><div class="stat-label">Collected (paid)</div><div class="stat-value" id="inv-stat-collected">—</div></div>
+      </div>
+      <div class="callfilter-bar" id="invoice-presets">
+        <button type="button" class="chip active" data-preset="all" onclick="setInvoicePreset('all')">All billable jobs</button>
+        <button type="button" class="chip" data-preset="ready" onclick="setInvoicePreset('ready')">Ready to invoice</button>
+        <button type="button" class="chip" data-preset="outstanding" onclick="setInvoicePreset('outstanding')">Outstanding</button>
+        <button type="button" class="chip" data-preset="30" onclick="setInvoicePreset('30')">30+ days</button>
+        <button type="button" class="chip" data-preset="60" onclick="setInvoicePreset('60')">60+ days</button>
+        <button type="button" class="chip" data-preset="90" onclick="setInvoicePreset('90')">90+ days</button>
+        <button type="button" class="chip" data-preset="Paid" onclick="setInvoicePreset('Paid')">Paid</button>
+      </div>
+      <div class="callfilter-bar">
+        <input type="text" id="invoice-search" class="callfilter-search" style="margin-left:0; flex:1;" placeholder="Search customer, job #, technician…" oninput="filterInvoices()">
+        <button type="button" class="btn" onclick="filterInvoices()">Search</button>
+        <button type="button" class="btn" onclick="clearInvoiceSearch()">Clear</button>
       </div>
       <div class="table-scroll">
 <table class="data" id="table-invoices">
-        <tr><th>Invoice</th><th>Customer</th><th>Category</th><th>Job</th><th>Amount</th><th>Status</th><th>Notes</th><th>Actions</th></tr>
+        <tr><th>Invoice</th><th>Customer</th><th>Job type</th><th>Technician</th><th>Amount</th><th>Status</th><th>Aging</th><th>Next follow-up</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -1167,22 +1186,29 @@
 
 <div class="modal-backdrop" id="modal-invoice">
   <div class="modal">
-    <div class="modal-head"><h3 data-add-label="Add invoice">Add invoice</h3><button class="modal-close" onclick="closeModal('invoice')">&times;</button></div>
+    <div class="modal-head"><h3>Update invoice &amp; payment</h3><button class="modal-close" onclick="closeModal('invoice')">&times;</button></div>
     <form onsubmit="return submitInvoice(event)">
-      <div class="field"><label>Customer name</label><input type="text" id="invoice-customer" required></div>
-      <div class="field"><label>Category</label>
-        <select id="invoice-category"><option>PMA/Service Plan</option><option>Installation</option><option>New Construction</option><option>Small Job</option><option>Service Call/Repair</option></select>
-      </div>
+      <div class="field" id="invoice-job-summary" style="background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:10px 12px; font-size:13px; color:var(--text-dim);"></div>
       <div class="field-row">
-        <div class="field"><label>Amount ($)</label><input type="number" step="0.01" id="invoice-amount" required></div>
-        <div class="field"><label>Status</label>
-          <select id="invoice-status"><option>Unpaid</option><option>Paid</option></select>
+        <div class="field"><label>Invoice amount ($)</label><input type="number" step="0.01" min="0" id="invoice-amount" required></div>
+        <div class="field"><label>Invoice status</label>
+          <select id="invoice-status"><option>Not Invoiced</option><option>Unpaid</option><option>For Follow-up</option><option>Paid</option><option>No Charge</option></select>
         </div>
       </div>
-      <div class="field"><label>Description / notes</label><textarea id="invoice-notes" placeholder="optional"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Payment date</label><input type="date" id="invoice-payment-date"></div>
+        <div class="field"><label>Payment method</label>
+          <select id="invoice-payment-method"><option value="">Not paid yet</option><option>Cash</option><option>Check</option><option>Credit Card</option><option>ACH / Bank Transfer</option><option>Financing</option><option>Other</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Next follow-up date</label><input type="date" id="invoice-followup-date"></div>
+        <div class="field"><label>Last contacted</label><input type="date" id="invoice-last-contacted"></div>
+      </div>
+      <div class="field"><label>Collection notes</label><textarea id="invoice-notes" placeholder="Calls made, promises to pay, disputes, payment plan details..."></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('invoice')">Cancel</button>
-        <button type="submit" class="btn btn-primary" data-add-label="Save invoice">Save invoice</button>
+        <button type="submit" class="btn btn-primary">Save changes</button>
       </div>
     </form>
   </div>
@@ -1641,19 +1667,17 @@ Cool Bros Heating & Air Conditioning`;
     const who = currentFullName || currentUserEmail || '';
     document.getElementById('dash-date').textContent = dateLabel + (who ? ' — dispatcher: ' + who : '');
 
-    const [jobsRes, callsRes, leadsRes, warrantyRes, invoicesRes, debriefsRes] = await Promise.all([
+    const [jobsRes, callsRes, leadsRes, warrantyRes, debriefsRes] = await Promise.all([
       db.from('jobs').select('*, customers(first_name,last_name)'),
       db.from('call_log').select('outcome'),
       db.from('leads').select('status'),
       db.from('warranty_claims').select('status'),
-      db.from('invoices').select('status'),
       db.from('tech_debriefs').select('technician, debrief_date')
     ]);
     const jobs = jobsRes.data || [];
     const calls = callsRes.data || [];
     const leads = leadsRes.data || [];
     const warranty = warrantyRes.data || [];
-    const invoices = invoicesRes.data || [];
     const debriefs = debriefsRes.data || [];
 
     const technicians = Array.from(new Set(jobs.map(j => j.technician).filter(Boolean)));
@@ -1662,7 +1686,7 @@ Cool Bros Heating & Air Conditioning`;
     const missedCalls = calls.filter(c => c.outcome === 'Missed').length;
     const leadsNeedCallback = leads.filter(l => l.status === 'Needs callback').length;
     const warrantyPending = warranty.filter(w => !['Credit Received','Closed','Denied'].includes(w.status)).length;
-    const unpaidInvoices = invoices.filter(i => i.status === 'Unpaid').length;
+    const unpaidInvoices = jobs.filter(j => Number(j.invoice_amount) > 0 && ['Unpaid','For Follow-up'].includes(j.invoice_status)).length;
     const todaysFollowUp = todaysJobs.filter(j => j.status !== 'Completed').length;
 
     document.getElementById('dash-jobs').textContent = jobs.length;
@@ -2424,15 +2448,81 @@ Cool Bros Heating & Air Conditioning`;
     });
   }
 
+  const invoiceFilter = { preset: 'all', search: '' };
+
+  function invoiceAgingDays(row){
+    if(!['Unpaid','For Follow-up'].includes(row.invoice_status)) return null;
+    const base = row.scheduled_date;
+    if(!base) return null;
+    const days = Math.floor((Date.now() - new Date(base + 'T00:00:00').getTime()) / 86400000);
+    return days >= 0 ? days : 0;
+  }
+
+  function invoiceAgingHtml(days){
+    if(days == null) return '<span style="color:var(--text-faint);">—</span>';
+    const cls = days > 60 ? 'unpaid' : (days > 30 ? 'pending' : 'scheduled');
+    return pillSpan(days + ' days', cls);
+  }
+
   async function loadInvoices(){
-    const { data } = await db.from('invoices').select('*, customers(first_name,last_name,email)').order('created_at', {ascending:false});
-    rowCache.invoices = data || [];
+    const { data } = await db.from('jobs').select('*, customers(first_name,last_name,email)').order('scheduled_date', {ascending:false});
+    rowCache.invoices = (data || []).filter(row => Number(row.invoice_amount) > 0);
+    renderInvoices();
+  }
+
+  function renderInvoices(){
+    const rows = rowCache.invoices || [];
+    const outstanding = rows.filter(r => ['Unpaid','For Follow-up'].includes(r.invoice_status));
+    const outstandingTotal = outstanding.reduce((s,r) => s + Number(r.invoice_amount||0), 0);
+    const overdue90Total = outstanding.filter(r => (invoiceAgingDays(r)||0) > 90).reduce((s,r) => s + Number(r.invoice_amount||0), 0);
+    const readyCount = rows.filter(r => r.invoice_status === 'Not Invoiced').length;
+    const collectedTotal = rows.filter(r => r.invoice_status === 'Paid').reduce((s,r) => s + Number(r.invoice_amount||0), 0);
+    document.getElementById('inv-stat-outstanding').textContent = '$' + outstandingTotal.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+    document.getElementById('inv-stat-overdue').textContent = '$' + overdue90Total.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+    document.getElementById('inv-stat-ready').textContent = readyCount;
+    document.getElementById('inv-stat-collected').textContent = '$' + collectedTotal.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+
     clearRows('table-invoices');
-    (data||[]).forEach(row => {
-      const statusCls = row.status === 'Paid' ? 'paid' : 'unpaid';
-      const html = `<tr><td class="mono">INV-${row.invoice_number}</td><td>${custName(row)}</td><td>${row.category||'—'}</td><td class="mono">—</td><td class="mono">$${Number(row.amount||0).toLocaleString()}</td><td>${pillSpan(row.status, statusCls)}</td><td>${row.notes||'—'}</td><td><button class="btn-icon" onclick="editInvoice('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('invoices','${row.id}',loadInvoices)">Delete</button></td></tr>`;
+    const q = invoiceFilter.search.trim().toLowerCase();
+    const filtered = rows.filter(row => {
+      const days = invoiceAgingDays(row);
+      if(invoiceFilter.preset === 'ready' && row.invoice_status !== 'Not Invoiced') return false;
+      if(invoiceFilter.preset === 'outstanding' && !['Unpaid','For Follow-up'].includes(row.invoice_status)) return false;
+      if(invoiceFilter.preset === '30' && !(days != null && days > 30)) return false;
+      if(invoiceFilter.preset === '60' && !(days != null && days > 60)) return false;
+      if(invoiceFilter.preset === '90' && !(days != null && days > 90)) return false;
+      if(invoiceFilter.preset === 'Paid' && row.invoice_status !== 'Paid') return false;
+      if(!q) return true;
+      const haystack = [custName(row), row.job_number, row.technician].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+    if(!filtered.length){
+      document.getElementById('table-invoices').insertAdjacentHTML('beforeend', `<tr><td colspan="9" style="text-align:center; color:var(--text-faint); padding:20px;">No billable jobs match this view.</td></tr>`);
+      return;
+    }
+    filtered.forEach(row => {
+      const days = invoiceAgingDays(row);
+      const followUp = row.next_follow_up_date ? fmtDate(row.next_follow_up_date) : '<span style="color:var(--text-faint);">—</span>';
+      const html = `<tr><td class="mono">INV-${row.job_number}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.technician||'—'}</td><td class="mono">$${Number(row.invoice_amount||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${invoiceAgingHtml(days)}</td><td class="mono">${followUp}</td><td><button class="btn-icon" onclick="editInvoice('${row.id}')">Edit</button></td></tr>`;
       document.getElementById('table-invoices').insertAdjacentHTML('beforeend', html);
     });
+  }
+
+  function setInvoicePreset(preset){
+    invoiceFilter.preset = preset;
+    document.querySelectorAll('#invoice-presets .chip').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+    renderInvoices();
+  }
+
+  function filterInvoices(){
+    invoiceFilter.search = document.getElementById('invoice-search').value;
+    renderInvoices();
+  }
+
+  function clearInvoiceSearch(){
+    document.getElementById('invoice-search').value = '';
+    invoiceFilter.search = '';
+    renderInvoices();
   }
 
   // ---------- SUBMIT HANDLERS (insert into Supabase) ----------
@@ -3073,23 +3163,27 @@ Cool Bros Heating & Air Conditioning`;
   async function submitInvoice(e){
     e.preventDefault();
     const f = e.target;
-    const customer = document.getElementById('invoice-customer');
-    const category = document.getElementById('invoice-category');
     const amount = document.getElementById('invoice-amount');
     const status = document.getElementById('invoice-status');
     const notes = document.getElementById('invoice-notes');
     try{
-      const customer_id = await findOrCreateCustomer(customer.value);
-      const payload = { customer_id, category: category.value, amount: parseFloat(amount.value), status: status.value, invoice_date: new Date().toISOString().slice(0,10), notes: notes.value || null };
-      let error;
-      if(editState.invoice){
-        ({ error } = await db.from('invoices').update(payload).eq('id', editState.invoice));
-      } else {
-        ({ error } = await db.from('invoices').insert(payload));
+      if(!editState.invoice) throw new Error('No job selected for this invoice.');
+      const payload = {
+        invoice_amount: parseFloat(amount.value),
+        invoice_status: status.value,
+        payment_date: document.getElementById('invoice-payment-date').value || null,
+        payment_method: document.getElementById('invoice-payment-method').value || null,
+        next_follow_up_date: document.getElementById('invoice-followup-date').value || null,
+        last_contacted_date: document.getElementById('invoice-last-contacted').value || null,
+        collection_notes: notes.value || null
+      };
+      const { error } = await db.from('jobs').update(payload).eq('id', editState.invoice);
+      if(error){
+        if(/payment_date|payment_method|next_follow_up_date|last_contacted_date|collection_notes/i.test(error.message||'')) throw new Error('Your Supabase database needs the Invoicing & Collections migration (new columns on jobs). Run the SQL file included with this build, then save again.');
+        throw error;
       }
-      if(error) throw error;
       editState.invoice = null;
-      f.reset(); closeModal('invoice'); showToast('Invoice saved'); await loadInvoices();
+      f.reset(); closeModal('invoice'); showToast('Invoice updated'); await loadDispatch(); await loadInvoices();
     } catch(err){ alert(err.message); }
     return false;
   }
@@ -3098,28 +3192,27 @@ Cool Bros Heating & Air Conditioning`;
     const row = findCached('invoices', id);
     if(!row) return;
     editState.invoice = id;
-    document.getElementById('invoice-customer').value = custName(row);
-    document.getElementById('invoice-category').value = row.category || 'PMA/Service Plan';
-    document.getElementById('invoice-amount').value = row.amount ?? '';
-    document.getElementById('invoice-status').value = row.status || 'Unpaid';
-    document.getElementById('invoice-notes').value = row.notes || '';
-    const h3 = document.querySelector('#modal-invoice .modal-head h3');
-    if(h3) h3.textContent = 'Edit invoice';
-    const btn = document.querySelector('#modal-invoice button[type=submit]');
-    if(btn) btn.textContent = 'Save changes';
+    const summary = document.getElementById('invoice-job-summary');
+    if(summary) summary.innerHTML = `<strong>Job #${row.job_number}</strong> — ${custName(row)}${row.job_type ? ' · ' + row.job_type : ''}${row.technician ? ' · ' + row.technician : ''}${row.scheduled_date ? ' · ' + fmtDate(row.scheduled_date) : ''}`;
+    document.getElementById('invoice-amount').value = row.invoice_amount ?? '';
+    document.getElementById('invoice-status').value = row.invoice_status || 'Not Invoiced';
+    document.getElementById('invoice-payment-date').value = row.payment_date || '';
+    document.getElementById('invoice-payment-method').value = row.payment_method || '';
+    document.getElementById('invoice-followup-date').value = row.next_follow_up_date || '';
+    document.getElementById('invoice-last-contacted').value = row.last_contacted_date || '';
+    document.getElementById('invoice-notes').value = row.collection_notes || '';
     openModal('invoice');
   }
 
   // ---------- DAILY REPORT ----------
   async function computeLiveReport(){
     const today = new Date().toISOString().slice(0,10);
-    const [jobs, calls, callbacks, installs, warranty, invoices, estimates, leads] = await Promise.all([
-      db.from('jobs').select('status, job_type', {count:'exact'}),
+    const [jobs, calls, callbacks, installs, warranty, estimates, leads] = await Promise.all([
+      db.from('jobs').select('status, job_type, invoice_amount, invoice_status', {count:'exact'}),
       db.from('call_log').select('outcome'),
       db.from('callbacks').select('status'),
       db.from('installations').select('id').eq('install_date', today),
       db.from('warranty_claims').select('status'),
-      db.from('invoices').select('status'),
       db.from('estimates').select('status'),
       db.from('leads').select('status')
     ]);
@@ -3127,7 +3220,7 @@ Cool Bros Heating & Air Conditioning`;
     const missed_calls = (calls.data||[]).filter(c => c.outcome === 'Missed').length;
     const callbacks_pending = (callbacks.data||[]).filter(c => c.status === 'Pending').length;
     const warranty_pending = (warranty.data||[]).filter(w => !['Credit Received','Closed','Denied'].includes(w.status)).length;
-    const unpaid_invoices = (invoices.data||[]).filter(i => i.status === 'Unpaid').length;
+    const unpaid_invoices = jobsData.filter(j => Number(j.invoice_amount) > 0 && ['Unpaid','For Follow-up'].includes(j.invoice_status)).length;
 
     const estimatesData = estimates.data || [];
     const estimates_created = estimatesData.length;
