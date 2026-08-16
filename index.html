@@ -340,6 +340,39 @@
   .report-line:last-child{border-bottom:none;}
   .report-line span:last-child{color:var(--text-dim); font-family:'JetBrains Mono',monospace; font-size:12px;}
 
+  .report-headline{
+    font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:17px;
+    color:var(--text); margin:0 0 18px 0; letter-spacing:0.2px;
+  }
+  .report-headline .rate{color:var(--cyan);}
+  .report-section{margin-bottom:24px;}
+  .report-section-title{
+    font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:13px;
+    letter-spacing:0.8px; text-transform:uppercase; color:var(--text-faint);
+    margin:0 0 10px 2px;
+  }
+  .report-allclear{
+    background:var(--panel); border:1px solid var(--cyan-dim); border-radius:var(--radius);
+    padding:13px 16px; margin-bottom:26px; color:var(--cyan); font-size:13.5px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .report-bar-row{
+    display:flex; align-items:center; gap:12px; padding:8px 0;
+    border-bottom:1px solid var(--line-soft); font-size:13px;
+  }
+  .report-bar-row:last-child{border-bottom:none;}
+  .report-bar-label{width:100px; flex-shrink:0; color:var(--text);}
+  .report-bar-track{flex:1; height:8px; background:var(--panel-2); border-radius:4px; overflow:hidden;}
+  .report-bar-fill{height:100%; background:var(--cyan); border-radius:4px; transition:width .25s;}
+  .report-bar-value{width:24px; text-align:right; font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:12px;}
+  .report-notes-input{
+    width:100%; min-height:76px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:8px; color:var(--text); font-family:'Inter',sans-serif; font-size:13px;
+    padding:10px 12px; resize:vertical; box-sizing:border-box;
+  }
+  .report-notes-input:focus{outline:none; border-color:var(--cyan-dim);}
+  .report-notes-hint{color:var(--text-faint); font-size:11px; margin-top:6px;}
+
   ::-webkit-scrollbar{height:8px; width:8px;}
   ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
 
@@ -3263,35 +3296,109 @@ Cool Bros Heating & Air Conditioning`;
     };
   }
 
-  function renderReportBlocks(r){
+  function reportEscapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function reportStat(label, value, warn){
+    return `<div class="stat${warn ? ' warn' : ''}"><div class="stat-label">${label}</div><div class="stat-value">${value ?? '—'}</div></div>`;
+  }
+
+  // Flags things that actually need a human to do something about them today,
+  // ranked so the dispatcher and the boss both see the same priority order.
+  function reportFlags(r){
+    const flags = [];
+    if(r.jobs_pending)       flags.push({n:r.jobs_pending,       label: r.jobs_pending === 1 ? 'job still open today' : 'jobs still open today', view:'dispatch'});
+    if(r.missed_calls)       flags.push({n:r.missed_calls,       label: r.missed_calls === 1 ? 'missed call' : 'missed calls', view:'calls'});
+    if(r.callbacks_pending)  flags.push({n:r.callbacks_pending,  label: 'callbacks pending', view:'callbacks'});
+    if(r.unpaid_invoices)    flags.push({n:r.unpaid_invoices,    label: 'unpaid invoices', view:'invoices'});
+    if(r.estimates_pending)  flags.push({n:r.estimates_pending,  label: 'estimates awaiting a customer response', view:'estimates'});
+    if(r.warranty_pending)   flags.push({n:r.warranty_pending,   label: 'parts warranty claims open', view:'warranty'});
+    return flags.sort((a,b) => b.n - a.n);
+  }
+
+  function renderReportBlocks(r, editable){
     const jobsByType = r.jobs_by_type || {};
-    const jobTypeRows = ['Repair','Maintenance','Install','Warranty'].map(t =>
-      `<div class="report-line"><span>${t}</span><span>${jobsByType[t] ?? 0}</span></div>`
-    ).join('');
+    const jobTypes = ['Repair','Maintenance','Install','Warranty'];
+    const maxType = Math.max(1, ...jobTypes.map(t => jobsByType[t] ?? 0));
+    const jobTypeRows = jobTypes.map(t => {
+      const v = jobsByType[t] ?? 0;
+      const pct = Math.round((v / maxType) * 100);
+      return `<div class="report-bar-row"><span class="report-bar-label">${t}</span><div class="report-bar-track"><div class="report-bar-fill" style="width:${pct}%;"></div></div><span class="report-bar-value">${v}</span></div>`;
+    }).join('');
+
+    const total = r.jobs_total ?? 0;
+    const completed = r.jobs_completed ?? 0;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : null;
+    const flags = reportFlags(r);
+
+    const headline = total === 0
+      ? 'No jobs logged yet today.'
+      : `<span class="rate">${completed} of ${total} jobs completed (${rate}%)</span>` + (flags.length ? ' today.' : ' — nothing else needs attention.');
+
+    const attentionHtml = flags.length ? `
+      <div class="report-section-title"><span class="pulse" style="display:inline-block; vertical-align:middle; margin-right:6px;"></span>Needs attention</div>
+      <div class="attention" style="margin-bottom:26px;">
+        ${flags.map(f => `<div class="attn-row"${editable ? ` onclick="goTo('${f.view}')"` : ''}><span class="n">${f.n}</span><span class="lbl">${f.label}</span>${editable ? '<span class="go">view →</span>' : ''}</div>`).join('')}
+      </div>` : `<div class="report-allclear">✅ All caught up — no open jobs, missed calls, or pending items.</div>`;
+
+    const notesHtml = editable
+      ? `<div class="report-block">
+           <h3>Notes for your boss</h3>
+           <textarea class="report-notes-input" id="report-notes-input" placeholder="Anything unusual today — escalations, a technician out sick, a big job that came in, etc.">${reportEscapeHtml(r.notes)}</textarea>
+           <div class="report-notes-hint">Saved when you click "Save &amp; send to boss".</div>
+         </div>`
+      : `<div class="report-block">
+           <h3>Notes</h3>
+           <div class="report-line"><span>${r.notes ? reportEscapeHtml(r.notes) : 'No notes for this report.'}</span><span></span></div>
+         </div>`;
+
     return `
-      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat"><div class="stat-label">Jobs total</div><div class="stat-value">${r.jobs_total ?? '—'}</div></div>
-        <div class="stat"><div class="stat-label">Jobs completed</div><div class="stat-value">${r.jobs_completed ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Jobs pending</div><div class="stat-value">${r.jobs_pending ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Missed calls</div><div class="stat-value">${r.missed_calls ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Callbacks pending</div><div class="stat-value">${r.callbacks_pending ?? '—'}</div></div>
-        <div class="stat"><div class="stat-label">Installs completed</div><div class="stat-value">${r.installations_completed ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Parts warranty open</div><div class="stat-value">${r.warranty_pending ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Unpaid invoices</div><div class="stat-value">${r.unpaid_invoices ?? '—'}</div></div>
-        <div class="stat"><div class="stat-label">Estimates created</div><div class="stat-value">${r.estimates_created ?? '—'}</div></div>
-        <div class="stat"><div class="stat-label">Estimates won/approved</div><div class="stat-value">${r.estimates_approved ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Estimates lost</div><div class="stat-value">${r.estimates_lost ?? '—'}</div></div>
-        <div class="stat warn"><div class="stat-label">Estimates waiting</div><div class="stat-value">${r.estimates_pending ?? '—'}</div></div>
-        <div class="stat"><div class="stat-label">Leads won</div><div class="stat-value">${r.leads_won ?? '—'}</div></div>
+      <div class="report-headline">${headline}</div>
+      ${attentionHtml}
+
+      <div class="report-section">
+        <div class="report-section-title">Field operations</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+          ${reportStat('Jobs total', r.jobs_total)}
+          ${reportStat('Jobs completed', r.jobs_completed)}
+          ${reportStat('Jobs pending', r.jobs_pending, r.jobs_pending > 0)}
+          ${reportStat('Installs completed', r.installations_completed)}
+        </div>
       </div>
+
+      <div class="report-section">
+        <div class="report-section-title">Customer response</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+          ${reportStat('Missed calls', r.missed_calls, r.missed_calls > 0)}
+          ${reportStat('Callbacks pending', r.callbacks_pending, r.callbacks_pending > 0)}
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title">Sales pipeline</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+          ${reportStat('Estimates created', r.estimates_created)}
+          ${reportStat('Estimates won', r.estimates_approved)}
+          ${reportStat('Estimates lost', r.estimates_lost, r.estimates_lost > 0)}
+          ${reportStat('Estimates waiting', r.estimates_pending, r.estimates_pending > 0)}
+          ${reportStat('Leads won', r.leads_won)}
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title">Financial &amp; warranty</div>
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+          ${reportStat('Unpaid invoices', r.unpaid_invoices, r.unpaid_invoices > 0)}
+          ${reportStat('Parts warranty open', r.warranty_pending, r.warranty_pending > 0)}
+        </div>
+      </div>
+
       <div class="report-block">
         <h3>Jobs completed by type</h3>
         ${jobTypeRows}
       </div>
-      <div class="report-block">
-        <h3>Notes</h3>
-        <div class="report-line"><span>${r.notes || 'No notes for this report.'}</span><span></span></div>
-      </div>
+      ${notesHtml}
     `;
   }
 
@@ -3301,7 +3408,7 @@ Cool Bros Heating & Air Conditioning`;
       document.getElementById('report-title').textContent = 'Daily report — ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
       document.getElementById('report-sub').textContent = 'Live counts — click Save to send a snapshot to your boss';
       const live = await computeLiveReport();
-      body.innerHTML = renderReportBlocks(live);
+      body.innerHTML = renderReportBlocks(live, true);
       body.dataset.live = JSON.stringify(live);
     } else {
       document.getElementById('report-title').textContent = 'Daily report';
@@ -3310,7 +3417,7 @@ Cool Bros Heating & Air Conditioning`;
       if(!data){ body.innerHTML = '<div class="report-block"><h3>No report yet</h3></div>'; return; }
       const merged = { ...data, ...(data.details_json || {}) };
       document.getElementById('report-title').textContent = 'Daily report — ' + fmtDate(data.report_date);
-      body.innerHTML = renderReportBlocks(merged);
+      body.innerHTML = renderReportBlocks(merged, false);
     }
   }
 
@@ -3318,6 +3425,8 @@ Cool Bros Heating & Air Conditioning`;
     if(currentRole !== 'dispatcher') return;
     const body = document.getElementById('report-body');
     const live = body.dataset.live ? JSON.parse(body.dataset.live) : await computeLiveReport();
+    const notesEl = document.getElementById('report-notes-input');
+    const notes = notesEl ? notesEl.value.trim() || null : null;
     const today = new Date().toISOString().slice(0,10);
     try{
       const { error } = await db.from('daily_reports').upsert({
@@ -3331,9 +3440,13 @@ Cool Bros Heating & Air Conditioning`;
         installations_completed: live.installations_completed,
         warranty_pending: live.warranty_pending,
         unpaid_invoices: live.unpaid_invoices,
+        notes: notes,
         details_json: live.details_json
       }, { onConflict: 'report_date,dispatcher_id' });
-      if(error) throw error;
+      if(error){
+        if(/notes/i.test(error.message||'')) throw new Error('Your Supabase "daily_reports" table needs a "notes" text column added before notes can be saved. The rest of the report still saved.');
+        throw error;
+      }
       showToast('Report saved — your boss can now see it');
     } catch(err){ alert(err.message); }
   }
