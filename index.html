@@ -1207,6 +1207,12 @@
     display: block !important;
   }
 
+
+  /* Password Vault export controls */
+  .vault-export-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .vault-export-actions .btn{white-space:nowrap}
+  @media(max-width:900px){.vault-export-actions{width:100%}}
+
 </style>
 </head>
 <body>
@@ -1655,7 +1661,16 @@
       </div>
     </div>
 
-    <!-- ============ PASSWORD VAULT ============ -->     <div class="view" id="view-vault">       <div class="topbar">         <div>           <h1>Password vault</h1>           <div class="date">Company websites, usernames and passwords — encrypted before storage.</div>         </div>         <button class="btn btn-primary" onclick="openVaultEntry()">+ Add login</button>       </div>        <div id="vault-locked" class="vault-lockbox" style="display:none;">         <div class="section-title">🔒 Vault locked</div>         <p class="vault-note">Enter the shared vault password to decrypt the saved logins. The vault password is never stored in Supabase or in the page.</p>         <div class="field-row">           <div class="field" style="margin-bottom:0;flex:1;"><label>Vault password</label><input type="password" id="vault-unlock-password" autocomplete="current-password" onkeydown="if(event.key==='Enter') unlockVault()"></div>           <div style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="unlockVault()">Unlock</button></div>         </div>         <div id="vault-unlock-error" class="auth-error" style="margin-top:12px;margin-bottom:0;"></div>       </div>        <div id="vault-unlocked" style="display:none;">         <div class="vault-toolbar">           <input class="vault-search" id="vault-search" placeholder="Search website, username, category or notes…" oninput="renderVault()">           <span class="vault-status" id="vault-status">Unlocked</span>           <button class="btn" onclick="lockVault()">Lock</button>         </div>         <div id="vault-grid" class="vault-grid"></div>       </div>     </div>
+    <!-- ============ PASSWORD VAULT ============ -->     <div class="view" id="view-vault">       <div class="topbar">         <div>           <h1>Password vault</h1>           <div class="date">Company websites, usernames and passwords — encrypted before storage.</div>         </div>         <button class="btn btn-primary" onclick="openVaultEntry()">+ Add login</button>       </div>        <div id="vault-locked" class="vault-lockbox" style="display:none;">         <div class="section-title">🔒 Vault locked</div>         <p class="vault-note">Enter the shared vault password to decrypt the saved logins. The vault password is never stored in Supabase or in the page.</p>         <div class="field-row">           <div class="field" style="margin-bottom:0;flex:1;"><label>Vault password</label><input type="password" id="vault-unlock-password" autocomplete="current-password" onkeydown="if(event.key==='Enter') unlockVault()"></div>           <div style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="unlockVault()">Unlock</button></div>         </div>         <div id="vault-unlock-error" class="auth-error" style="margin-top:12px;margin-bottom:0;"></div>       </div>        <div id="vault-unlocked" style="display:none;">         <div class="vault-toolbar">
+          <input class="vault-search" id="vault-search" placeholder="Search website, username, category or notes…" oninput="renderVault()">
+          <span class="vault-status" id="vault-status">Unlocked</span>
+          <div class="vault-export-actions">
+            <button class="btn" type="button" onclick="exportVaultCSV()">⬇ CSV</button>
+            <button class="btn" type="button" onclick="exportVaultExcel()">⬇ Excel</button>
+            <button class="btn" type="button" onclick="exportVaultPDF()">⬇ PDF</button>
+            <button class="btn" type="button" onclick="lockVault()">Lock</button>
+          </div>
+        </div>         <div id="vault-grid" class="vault-grid"></div>       </div>     </div>
 
     <!-- ============ KPI TRACKING ============ -->
     <div class="view" id="view-kpi">
@@ -2102,6 +2117,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
 <script>
   const SUPABASE_URL = 'https://qjhntwuxcqeogzoxnbrg.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_Lfh-WX52FpPQv8D8_TmiDg_M1wSX1Mi';
@@ -4027,6 +4044,133 @@ Cool Bros Corp`;
     const btn = document.querySelector('#modal-callback button[type=submit]');
     if(btn) btn.textContent = 'Save changes';
     openModal('callback');
+  }
+
+
+  // ---------- PASSWORD VAULT EXPORTS ----------
+  // Exports are intentionally available only while the vault is unlocked.
+  // The files contain decrypted credentials, so the user is warned before export.
+  function getVaultExportRows(){
+    if(!vaultUnlocked || !vaultKey) {
+      alert('Unlock the Password Vault before exporting.');
+      return null;
+    }
+    if(!Array.isArray(vaultRows) || !vaultRows.length) {
+      alert('There are no saved vault logins to export.');
+      return null;
+    }
+    return vaultRows.map(r => ({
+      'Website / Service': r.name || '',
+      'Website URL': r.url || '',
+      'Username / Email': r.username || '',
+      'Password': r.password || '',
+      'Category': r.category || 'Other',
+      'Notes': r.notes || '',
+      'Created': r.created_at ? new Date(r.created_at).toLocaleString() : '',
+      'Updated': r.updated_at ? new Date(r.updated_at).toLocaleString() : ''
+    }));
+  }
+
+  function exportVaultCSV(){
+    const rows = getVaultExportRows();
+    if(!rows) return;
+
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','),
+      ...rows.map(row => headers.map(h => `"${String(row[h] ?? '').replace(/"/g,'""')}"`).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cool-bros-password-vault-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${rows.length} vault logins to CSV`);
+  }
+
+  function exportVaultExcel(){
+    const rows = getVaultExportRows();
+    if(!rows) return;
+
+    if(!window.XLSX){
+      alert('Excel export is still loading. Please wait a moment and try again.');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      {wch:28},{wch:48},{wch:30},{wch:28},{wch:18},{wch:40},{wch:24},{wch:24}
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Password Vault');
+    XLSX.writeFile(
+      workbook,
+      `cool-bros-password-vault-${new Date().toISOString().slice(0,10)}.xlsx`
+    );
+    showToast(`Exported ${rows.length} vault logins to Excel`);
+  }
+
+  function exportVaultPDF(){
+    const rows = getVaultExportRows();
+    if(!rows) return;
+
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      alert('PDF export is still loading. Please wait a moment and try again.');
+      return;
+    }
+
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'letter'});
+    const head = [[
+      'Website / Service',
+      'URL',
+      'Username / Email',
+      'Password',
+      'Category',
+      'Notes'
+    ]];
+    const body = rows.map(r => [
+      r['Website / Service'],
+      r['Website URL'],
+      r['Username / Email'],
+      r['Password'],
+      r['Category'],
+      r['Notes']
+    ]);
+
+    doc.setFontSize(16);
+    doc.text('COOL BROS CORP — Password Vault', 36, 36);
+    doc.setFontSize(9);
+    doc.text(`Exported: ${new Date().toLocaleString()} • ${rows.length} logins`, 36, 51);
+    doc.setTextColor(180, 60, 60);
+    doc.text('CONFIDENTIAL — contains decrypted credentials', 36, 65);
+    doc.setTextColor(0,0,0);
+
+    doc.autoTable({
+      head,
+      body,
+      startY:78,
+      margin:{left:24,right:24},
+      styles:{fontSize:7, cellPadding:4, overflow:'linebreak'},
+      headStyles:{fontSize:7},
+      columnStyles:{
+        0:{cellWidth:105},
+        1:{cellWidth:145},
+        2:{cellWidth:105},
+        3:{cellWidth:95},
+        4:{cellWidth:65},
+        5:{cellWidth:115}
+      }
+    });
+
+    doc.save(`cool-bros-password-vault-${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast(`Exported ${rows.length} vault logins to PDF`);
   }
 
   function downloadTableCSV(tableId, filename){
