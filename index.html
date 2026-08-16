@@ -581,7 +581,7 @@
       </div>
       <div class="table-scroll">
 <table class="data" id="table-dispatch">
-        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Scheduled</th><th>Invoice amount</th><th>Invoice status</th><th>Status</th><th>Photos</th><th>Actions</th></tr>
+        <tr><th>Job</th><th>Tech</th><th>Customer</th><th>Type</th><th>Description</th><th>Notes</th><th>Scheduled</th><th>Invoice amount</th><th>Invoice status</th><th>Status</th><th>Photos</th><th>Actions</th></tr>
       </table>
       </div>
     </div>
@@ -929,7 +929,7 @@
         </div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Time</label><input type="time" id="dispatch-time" required></div>
+        <div class="field"><label>Time</label><input type="time" id="dispatch-time"></div>
         <div class="field"><label>Scheduled date</label><input type="date" id="dispatch-scheduled-date" required></div>
       </div>
       <div class="field-row">
@@ -947,6 +947,7 @@
         </div>
       </div>
       <div class="field"><label>Description</label><textarea id="dispatch-description" placeholder="Job details, what needs to be done..."></textarea></div>
+      <div class="field"><label>Notes</label><textarea id="dispatch-notes" placeholder="What still needs to be done, follow-ups, internal notes..."></textarea></div>
       <div class="field"><label>Photos / attachments (optional)</label>
         <input type="file" id="dispatch-photos" accept="image/*" multiple>
         <div class="cert-current" id="dispatch-existing-photos"></div>
@@ -1635,7 +1636,7 @@ Cool Bros Heating & Air Conditioning`;
       const photosHtml = photoUrls.length
         ? photoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener" class="btn-icon" style="text-decoration:none;">📎 ${i+1}</a>`).join(' ')
         : '<span style="color:var(--text-faint);">—</span>';
-      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}${row.scheduled_time ? ' '+fmtTimeStr(row.scheduled_time) : ''}</td><td class="mono">${row.invoice_amount != null ? '$'+Number(row.invoice_amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td>${photosHtml}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
+      const html = `<tr><td class="mono">#${row.job_number}</td><td>${row.technician||'—'}</td><td>${custName(row)}</td><td>${row.job_type||'—'}</td><td>${row.description||'—'}</td><td>${row.notes||'—'}</td><td class="mono">${fmtDate(row.scheduled_date)}${row.scheduled_time ? ' '+fmtTimeStr(row.scheduled_time) : ''}</td><td class="mono">${row.invoice_amount != null ? '$'+Number(row.invoice_amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td><td>${invoiceStatusPill(row.invoice_status)}</td><td>${pillSpan(row.status, dispatchStatusClass(row.status))}</td><td>${photosHtml}</td><td><button class="btn-icon" onclick="editJob('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('jobs','${row.id}',loadDispatch)">Delete</button></td></tr>`;
       document.getElementById('table-dispatch').insertAdjacentHTML('beforeend', html);
     });
   }
@@ -2488,6 +2489,7 @@ Cool Bros Heating & Air Conditioning`;
     const type = document.getElementById('dispatch-jobtype');
     const status = document.getElementById('dispatch-status');
     const description = document.getElementById('dispatch-description');
+    const notes = document.getElementById('dispatch-notes');
     const scheduled_date = document.getElementById('dispatch-scheduled-date').value || new Date().toISOString().slice(0,10);
     const scheduled_time = document.getElementById('dispatch-time').value || null;
     const schedule_confidence = document.getElementById('dispatch-confidence').value;
@@ -2503,7 +2505,7 @@ Cool Bros Heating & Air Conditioning`;
         const uploaded = await uploadJobPhotos(Array.from(photoInput.files));
         photo_urls = [...dispatchEditingPhotoUrls, ...uploaded];
       }
-      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, scheduled_time, schedule_confidence, description: description.value || null, invoice_amount, invoice_status, photo_urls };
+      const payload = { customer_id, technician: tech.value, job_type: type.value, status: status.value, scheduled_date, scheduled_time, schedule_confidence, description: description.value || null, notes: notes.value || null, invoice_amount, invoice_status, photo_urls };
       if(job_number) payload.job_number = parseInt(job_number);
       let error, insertedJob, jobId = editState.dispatch;
       const existingJobRow = editState.dispatch ? findCached('jobs', editState.dispatch) : null;
@@ -2517,6 +2519,7 @@ Cool Bros Heating & Air Conditioning`;
         if(/invoice_amount|invoice_status/i.test(error.message||'')) throw new Error('Your Supabase database needs invoice_amount / invoice_status columns added to the jobs table. Run the migration, then save again.');
         if(/photo_urls/i.test(error.message||'')) throw new Error('Your Supabase database needs a photo_urls column (text array) added to the jobs table. Run the migration, then save again.');
         if(/scheduled_time/i.test(error.message||'')) throw new Error('Your Supabase database needs a scheduled_time column added to the jobs table. Run the migration, then save again.');
+        if(/\bnotes\b/i.test(error.message||'')) throw new Error('Your Supabase database needs a notes column added to the jobs table. Run the migration, then save again.');
         throw error;
       }
       if(type.value === 'Call Back'){
@@ -2552,6 +2555,7 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('dispatch-jobtype').value = row.job_type || 'Repair';
     document.getElementById('dispatch-status').value = row.status || 'Scheduled';
     document.getElementById('dispatch-description').value = row.description || '';
+    document.getElementById('dispatch-notes').value = row.notes || '';
     document.getElementById('dispatch-scheduled-date').value = row.scheduled_date || new Date().toISOString().slice(0,10);
     document.getElementById('dispatch-time').value = row.scheduled_time || '';
     document.getElementById('dispatch-confidence').value = row.schedule_confidence || 'Firm';
