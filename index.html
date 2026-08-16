@@ -1882,16 +1882,26 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('debrief-date').value = row.debrief_date || '';
     document.getElementById('debrief-notes').value = row.notes || '';
     document.getElementById('debrief-status').value = row.status || 'Submitted';
-    const existingWrap = document.getElementById('debrief-existing-photos');
-    existingWrap.innerHTML = debriefEditingPhotoUrls.length
-      ? 'Already attached: ' + debriefEditingPhotoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener">Photo ${i+1}</a>`).join(', ')
-      : '';
+    renderDebriefExistingPhotos();
     refreshDebriefJobPicker();
     const h3 = document.querySelector('#modal-debrief .modal-head h3');
     if(h3) h3.textContent = 'Edit debrief';
     const btn = document.querySelector('#modal-debrief button[type=submit]');
     if(btn) btn.textContent = 'Save changes';
     openModal('debrief');
+  }
+
+  function renderDebriefExistingPhotos(){
+    const existingWrap = document.getElementById('debrief-existing-photos');
+    if(!debriefEditingPhotoUrls.length){ existingWrap.innerHTML = ''; return; }
+    existingWrap.innerHTML = 'Already attached: ' + debriefEditingPhotoUrls.map((u,i) =>
+      `<span style="display:inline-flex; align-items:center; gap:3px; margin-right:8px;"><a href="${u}" target="_blank" rel="noopener">Photo ${i+1}</a><button type="button" class="btn-icon" title="Remove this photo" onclick="removeDebriefPhoto(${i})" style="padding:0 5px; line-height:1;">&times;</button></span>`
+    ).join('');
+  }
+
+  function removeDebriefPhoto(index){
+    debriefEditingPhotoUrls.splice(index, 1);
+    renderDebriefExistingPhotos();
   }
 
 
