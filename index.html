@@ -2130,6 +2130,17 @@
   let currentFullName = null;
   let authMode = 'login';
 
+  // Authoritative display name for the signed-in Cool Bros dispatcher.
+  // This prevents the login email from appearing in the dashboard greeting
+  // when the profile row is missing or full_name is blank.
+  function getDispatcherDisplayName(){
+    const email = String(currentUserEmail || '').trim().toLowerCase();
+    const profileName = String(currentFullName || '').trim();
+    if(profileName) return profileName;
+    if(email === 'dispatcher@coolbrosco.com') return 'Maricel';
+    return email || 'Dispatcher';
+  }
+
   const items = document.querySelectorAll('.nav-item');
   function goTo(name){
     items.forEach(i => i.classList.toggle('active', i.dataset.view === name));
@@ -2355,10 +2366,13 @@
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('whoami').textContent = (profile.full_name || currentUserEmail) + ' · ' + currentRole;
-      currentFullName = profile.full_name || null;
+      currentFullName = (profile.full_name || '').trim();
+      if(!currentFullName && String(currentUserEmail || '').trim().toLowerCase() === 'dispatcher@coolbrosco.com'){
+        currentFullName = 'Maricel';
+      }
       const dashProfileName = document.getElementById('dash-profile-name');
       const dashProfileEmail = document.getElementById('dash-profile-email');
-      if(dashProfileName) dashProfileName.textContent = currentFullName || 'Cool Bros Corp';
+      if(dashProfileName) dashProfileName.textContent = getDispatcherDisplayName();
       if(dashProfileEmail) dashProfileEmail.textContent = currentUserEmail || 'Signed in';
       applyRoleUI();
       populateSuggestionLists();
@@ -3084,9 +3098,9 @@ Cool Bros Corp`;
     const dateLabel = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
     const shortDate = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
     const dayName = now.toLocaleDateString('en-US', { weekday:'long' });
-    const who = currentFullName || currentUserEmail || '';
-    const firstName = (currentFullName || currentUserEmail || 'Dispatcher').split(/\s+/)[0];
-    const avatar = (currentFullName || currentUserEmail || 'CB').split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    const who = getDispatcherDisplayName();
+    const firstName = who.split(/\s+/)[0];
+    const avatar = who.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
     const greet = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
     document.getElementById('dash-date').textContent = dateLabel + (who ? ' — dispatcher: ' + who : '');
     document.getElementById('dash-date-short').textContent = shortDate;
