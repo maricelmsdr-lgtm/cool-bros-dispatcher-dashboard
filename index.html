@@ -745,7 +745,7 @@
       </div>
       <div class="table-scroll">
         <table class="data" id="table-equipmentjb">
-          <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Equipment warranty</th><th>JB warranty</th><th>Certificate</th><th>Actions</th></tr>
+          <tr><th>Customer</th><th>Brand</th><th>Equipment</th><th>Model no.</th><th>Serial no.</th><th>Install date</th><th>Equipment warranty</th><th>JB warranty</th><th>Certificate</th><th>Photos</th><th>Actions</th></tr>
         </table>
       </div>
     </div>
@@ -881,6 +881,10 @@
         <div class="field"><label>JB Warranty Length (years)</label><input type="number" id="eqjb-jb-length" min="1" max="20" placeholder="e.g. 10"></div>
       </div>
       <div class="field"><label>Warranty certificate</label><input type="file" id="eqjb-certificate" accept=".pdf,.jpg,.jpeg,.png"><div class="cert-current" id="eqjb-cert-current"></div></div>
+      <div class="field"><label>Photos of equipment</label>
+        <input type="file" id="eqjb-photos" accept="image/*" multiple>
+        <div class="cert-current" id="eqjb-existing-photos"></div>
+      </div>
       <div class="field"><label>Notes</label><textarea id="eqjb-notes" placeholder="Optional equipment or warranty notes"></textarea></div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('equipmentjb')">Cancel</button>
@@ -1209,6 +1213,11 @@
       }
       if(name === 'jbwarranty'){
         document.getElementById('jbwarranty-equipment-rows').querySelectorAll('.equipment-row').forEach((r,i) => { if(i > 0) r.remove(); });
+      }
+      if(name === 'equipmentjb'){
+        eqjbEditingPhotoUrls = [];
+        const existingWrap = document.getElementById('eqjb-existing-photos');
+        if(existingWrap) existingWrap.innerHTML = '';
       }
       if(name === 'estimate'){
         const dateField = document.getElementById('estimate-date');
@@ -1905,6 +1914,36 @@ Cool Bros Heating & Air Conditioning`;
     renderDispatchExistingPhotos();
   }
 
+  // ---------- Equipment photos (attached to Equipment & JB Warranty record) ----------
+  let eqjbEditingPhotoUrls = [];
+
+  async function uploadEquipmentPhotos(files){
+    const urls = [];
+    for(const file of files){
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `equipment/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+      const { error } = await db.storage.from('debrief-photos').upload(path, file);
+      if(error) throw error;
+      const { data } = db.storage.from('debrief-photos').getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
+  }
+
+  function renderEqjbExistingPhotos(){
+    const existingWrap = document.getElementById('eqjb-existing-photos');
+    if(!existingWrap) return;
+    if(!eqjbEditingPhotoUrls.length){ existingWrap.innerHTML = ''; return; }
+    existingWrap.innerHTML = 'Already attached: ' + eqjbEditingPhotoUrls.map((u,i) =>
+      `<span style="display:inline-flex; align-items:center; gap:3px; margin-right:8px;"><a href="${u}" target="_blank" rel="noopener">Photo ${i+1}</a><button type="button" class="btn-icon" title="Remove this photo" onclick="removeEqjbPhoto(${i})" style="padding:0 5px; line-height:1;">&times;</button></span>`
+    ).join('');
+  }
+
+  function removeEqjbPhoto(index){
+    eqjbEditingPhotoUrls.splice(index, 1);
+    renderEqjbExistingPhotos();
+  }
+
   // ---------- CALL LOG CENTER ----------
   const callFilter = { preset: 'today', from: null, to: null, search: '', type: 'all' };
   let callsRangeCache = [];
@@ -2141,7 +2180,7 @@ Cool Bros Heating & Air Conditioning`;
     clearRows('table-equipmentjb');
 
     if(!data || !data.length){
-      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', `<tr><td colspan="10" style="text-align:center; color:var(--text-faint); padding:20px;">No matching equipment or clients found.</td></tr>`);
+      document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', `<tr><td colspan="11" style="text-align:center; color:var(--text-faint); padding:20px;">No matching equipment or clients found.</td></tr>`);
       return;
     }
 
@@ -2170,7 +2209,7 @@ Cool Bros Heating & Air Conditioning`;
       const isOpen = forceOpen || eqjbOpenGroups.has(gid);
 
       const headerHtml = `<tr class="eqjb-group-row" data-gid="${gid}" onclick="toggleEquipmentJbGroup('${gid}')">
-        <td colspan="10">
+        <td colspan="11">
           <span class="eqjb-group-toggle" id="${gid}-arrow">${isOpen ? '▾' : '▸'}</span>${name}<span class="eqjb-group-meta">${rows.length} equipment${rows.length>1?'s':''} · ${activeCount} active/registered JB warranty</span>
           <button class="btn-icon" style="float:right;" onclick="event.stopPropagation(); addEquipmentForCustomer('${gid}')">+ Add equipment</button>
         </td>
@@ -2184,7 +2223,11 @@ Cool Bros Heating & Air Conditioning`;
         const eqCls = ['Active','Registered'].includes(eq) ? 'paid' : (eq === 'Expired' ? 'unpaid' : 'pending');
         const jb = row.jb_warranty_status || '—';
         const jbCls = ['Active','Registered'].includes(jb) ? 'paid' : (jb === 'Expired' ? 'unpaid' : 'pending');
-        const html = `<tr class="eqjb-detail-row ${gid}-detail" style="${isOpen ? 'display:table-row;' : ''}"><td></td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(eq,eqCls)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
+        const photoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+        const photosHtml = photoUrls.length
+          ? photoUrls.map((u,i) => `<a href="${u}" target="_blank" rel="noopener" class="btn-icon" style="text-decoration:none;">📎 ${i+1}</a>`).join(' ')
+          : '<span style="color:var(--text-faint);">—</span>';
+        const html = `<tr class="eqjb-detail-row ${gid}-detail" style="${isOpen ? 'display:table-row;' : ''}"><td></td><td>${row.brand||'—'}</td><td>${row.equipment||'—'}</td><td class="mono">${row.model||'—'}</td><td class="mono">${row.serial||'—'}</td><td class="mono">${fmtDate(row.install_date)}</td><td>${pillSpan(eq,eqCls)}</td><td>${pillSpan(jb,jbCls)}</td><td>${cert}</td><td>${photosHtml}</td><td>${send} <button class="btn-icon" onclick="editEquipmentJb('${row.id}')">Edit</button> <button class="btn-icon" onclick="deleteRow('installations','${row.id}',loadEquipmentJb)">Delete</button></td></tr>`;
         document.getElementById('table-equipmentjb').insertAdjacentHTML('beforeend', html);
       });
     });
@@ -2373,6 +2416,12 @@ Cool Bros Heating & Air Conditioning`;
       const address = document.getElementById('eqjb-address').value.trim();
       const customer_id = await findOrCreateCustomer(fullName, document.getElementById('eqjb-email').value, { phone, address });
       const file = document.getElementById('eqjb-certificate').files[0];
+      const photoInput = document.getElementById('eqjb-photos');
+      let photo_urls = eqjbEditingPhotoUrls;
+      if(photoInput.files && photoInput.files.length){
+        const uploaded = await uploadEquipmentPhotos(Array.from(photoInput.files));
+        photo_urls = [...eqjbEditingPhotoUrls, ...uploaded];
+      }
       const payload = {
         customer_id,
         brand: document.getElementById('eqjb-brand').value,
@@ -2386,7 +2435,8 @@ Cool Bros Heating & Air Conditioning`;
         equipment_warranty_length_years: document.getElementById('eqjb-eq-length').value ? parseInt(document.getElementById('eqjb-eq-length').value) : null,
         jb_warranty_status: document.getElementById('eqjb-jb-status').value,
         jb_warranty_length_years: document.getElementById('eqjb-jb-length').value ? parseInt(document.getElementById('eqjb-jb-length').value) : null,
-        notes: document.getElementById('eqjb-notes').value || null
+        notes: document.getElementById('eqjb-notes').value || null,
+        photo_urls
       };
       if(file) payload.certificate_url = await uploadCertificate(file, 'equipment_jb_warranty');
       let result;
@@ -2394,9 +2444,11 @@ Cool Bros Heating & Air Conditioning`;
       else { result = await db.from('installations').insert(payload); }
       if(result.error){
         if(/brand|jb_warranty|equipment_warranty|technician|notes/i.test(result.error.message||'')) throw new Error('Your Supabase database needs the Equipment & JB Warranty migration. Run the SQL file included with this build, then save again.');
+        if(/photo_urls/i.test(result.error.message||'')) throw new Error('Your Supabase database needs a photo_urls column (text array) added to the installations table. Run the migration, then save again.');
         throw result.error;
       }
       editState.equipmentjb = null; f.reset(); document.getElementById('eqjb-cert-current').innerHTML='';
+      eqjbEditingPhotoUrls = []; document.getElementById('eqjb-existing-photos').innerHTML='';
       closeModal('equipmentjb'); showToast('Equipment & JB Warranty saved'); await loadEquipmentJb();
     } catch(err){ alert(err.message); }
     return false;
@@ -2424,6 +2476,8 @@ Cool Bros Heating & Air Conditioning`;
     document.getElementById('eqjb-jb-length').value = row.jb_warranty_length_years || '';
     document.getElementById('eqjb-notes').value = row.notes || '';
     document.getElementById('eqjb-cert-current').innerHTML = row.certificate_url ? `<a href="${row.certificate_url}" target="_blank" style="color:var(--cyan);font-size:12px;">View current certificate</a>` : '';
+    eqjbEditingPhotoUrls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+    renderEqjbExistingPhotos();
     const h3 = document.querySelector('#modal-equipmentjb .modal-head h3'); if(h3) h3.textContent='Edit Equipment & JB Warranty Registration';
     const btn = document.querySelector('#modal-equipmentjb button[type=submit]'); if(btn) btn.textContent='Save changes';
     openModal('equipmentjb');
