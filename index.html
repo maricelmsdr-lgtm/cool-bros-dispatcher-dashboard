@@ -552,6 +552,7 @@
       <li class="nav-item" data-view="serviceplans"><span class="dot"></span>Service plans</li>
       <li class="nav-item" data-view="invoices"><span class="dot"></span>Invoices</li>
       <li class="nav-item" data-view="report"><span class="dot"></span>Daily report</li>
+      <li class="nav-item" data-view="team"><span class="dot"></span>Team</li>
       <li class="nav-item" onclick="openEmailComposer()"><span class="dot"></span>Email center</li>
     </ul>
     <div class="sidebar-foot" id="sidebar-foot">
@@ -917,6 +918,47 @@
       <div class="callfilter-label" id="kpi-range-label"></div>
       <div class="table-scroll">
         <table class="data" id="table-kpi"></table>
+      </div>
+    </div>
+
+    <!-- ============ TEAM MANAGEMENT ============ -->
+    <div class="view" id="view-team">
+      <div class="module-head">
+        <div><h2>Team management</h2><div class="module-sub">Invite teammates and manage who has access to this dashboard</div></div>
+      </div>
+
+      <div class="report-block">
+        <h3>Invite a teammate</h3>
+        <form onsubmit="return submitTeamInvite(event)">
+          <div class="field-row">
+            <div class="field" style="flex:2;"><label>Email</label><input type="email" id="team-invite-email" required></div>
+            <div class="field"><label>Role</label>
+              <select id="team-invite-role">
+                <option value="dispatcher">Dispatcher</option>
+                <option value="boss">Boss</option>
+              </select>
+            </div>
+            <div class="field" style="flex:0 0 auto; align-self:flex-end;">
+              <button type="submit" class="btn btn-primary" style="margin-bottom:13px;">Send invite</button>
+            </div>
+          </div>
+        </form>
+        <div class="report-notes-hint">They'll need to sign up on the login screen using this exact email address — their role is assigned automatically the moment they do.</div>
+        <div id="team-setup-notice" style="display:none; margin-top:10px; color:var(--amber); font-size:12.5px;"></div>
+      </div>
+
+      <div class="report-section-title">Current team</div>
+      <div class="table-scroll" style="margin-bottom:26px;">
+        <table class="data" id="table-team-members">
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
+        </table>
+      </div>
+
+      <div class="report-section-title">Pending invites</div>
+      <div class="table-scroll">
+        <table class="data" id="table-team-invites">
+          <tr><th>Email</th><th>Role</th><th>Invited</th><th>Actions</th></tr>
+        </table>
       </div>
     </div>
 
@@ -1522,7 +1564,7 @@
   function applyRoleUI(){
     const nav = document.getElementById('nav');
     if(currentRole === 'boss'){
-      const allowed = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls'];
+      const allowed = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls', 'team'];
       nav.querySelectorAll('.nav-item').forEach(i => { i.style.display = allowed.includes(i.dataset.view) ? '' : 'none'; });
       document.getElementById('report-save-btn').style.display = 'none';
       goTo('report');
@@ -1678,7 +1720,7 @@ Cool Bros Heating & Air Conditioning`;
   }
 
   async function loadView(name){
-    const bossAllowedViews = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls', 'kpi'];
+    const bossAllowedViews = ['report', 'dashboard', 'equipmentjb', 'serviceplans', 'calls', 'kpi', 'team'];
     if(currentRole !== 'dispatcher' && !bossAllowedViews.includes(name)) return;
     try{
       if(name === 'dashboard') await loadDashboardOverview();
@@ -1694,6 +1736,7 @@ Cool Bros Heating & Air Conditioning`;
       else if(name === 'invoices') await loadInvoices();
       else if(name === 'report') await loadReport();
       else if(name === 'kpi'){ updateKpiNavLabels(); await loadKPI(); }
+      else if(name === 'team') await loadTeam();
     } catch(err){ console.error('loadView error', name, err); }
   }
 
@@ -1707,6 +1750,101 @@ Cool Bros Heating & Air Conditioning`;
   function invoiceStatusPill(v){
     const cls = {'Paid':'paid','Unpaid':'unpaid','For Follow-up':'waiting','Not Invoiced':'scheduled','No Charge':'completed'}[v] || 'scheduled';
     return pillSpan(v || 'Not Invoiced', cls);
+  }
+
+  // ---------- TEAM MANAGEMENT ----------
+  // New logins can't be created from the browser without either hijacking the
+  // admin's own session or exposing a service-role key, so this works as an
+  // invite queue instead: adding someone here writes their email + intended
+  // role to team_invites. When they sign up with that email, a DB trigger
+  // (one-time SQL setup) applies the role and clears the invite automatically.
+  function roleRolePill(role){
+    return pillSpan(role === 'boss' ? 'Boss' : 'Dispatcher', role === 'boss' ? 'completed' : 'enroute');
+  }
+
+  async function loadTeam(){
+    const noticeEl = document.getElementById('team-setup-notice');
+    noticeEl.style.display = 'none';
+
+    const membersTbl = document.getElementById('table-team-members');
+    const invitesTbl = document.getElementById('table-team-invites');
+
+    const { data: members, error: memErr } = await db.from('profiles').select('id, full_name, role, email').order('full_name', {ascending:true});
+    if(memErr){
+      membersTbl.innerHTML = '<tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>';
+      membersTbl.innerHTML += `<tr><td colspan="4" style="color:var(--text-faint);">Could not load team members (${reportEscapeHtml(memErr.message)}).</td></tr>`;
+    } else {
+      membersTbl.innerHTML = '<tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>' + (members||[]).map(m => `
+        <tr>
+          <td>${reportEscapeHtml(m.full_name || '—')}${m.id === currentUserId ? ' <span class="pill scheduled">you</span>' : ''}</td>
+          <td>${reportEscapeHtml(m.email || '—')}</td>
+          <td>
+            <select onchange="updateTeamMemberRole('${m.id}', this)" ${m.id === currentUserId ? 'disabled title="You can\'t change your own role"' : ''}>
+              <option value="dispatcher" ${m.role === 'dispatcher' ? 'selected' : ''}>Dispatcher</option>
+              <option value="boss" ${m.role === 'boss' ? 'selected' : ''}>Boss</option>
+            </select>
+          </td>
+          <td>${m.id === currentUserId ? '' : `<button class="btn" onclick="removeTeamMember('${m.id}', '${reportEscapeHtml(m.full_name || m.email || 'this person')}')">Remove access</button>`}</td>
+        </tr>`).join('');
+    }
+
+    const { data: invites, error: invErr } = await db.from('team_invites').select('email, role, invited_at').order('invited_at', {ascending:false});
+    if(invErr){
+      invitesTbl.innerHTML = '<tr><th>Email</th><th>Role</th><th>Invited</th><th>Actions</th></tr>';
+      if(/relation .*team_invites.* does not exist/i.test(invErr.message||'')){
+        noticeEl.style.display = 'block';
+        noticeEl.textContent = 'One-time setup needed: the "team_invites" table doesn\'t exist in your Supabase project yet. Ask for the setup SQL and run it once in the Supabase SQL editor — invites will work right after.';
+      } else {
+        invitesTbl.innerHTML += `<tr><td colspan="4" style="color:var(--text-faint);">Could not load invites (${reportEscapeHtml(invErr.message)}).</td></tr>`;
+      }
+    } else {
+      invitesTbl.innerHTML = '<tr><th>Email</th><th>Role</th><th>Invited</th><th>Actions</th></tr>' + ((invites||[]).length
+        ? invites.map(inv => `
+          <tr>
+            <td>${reportEscapeHtml(inv.email)}</td>
+            <td>${roleRolePill(inv.role)}</td>
+            <td>${inv.invited_at ? fmtDate(inv.invited_at.slice(0,10)) : '—'}</td>
+            <td><button class="btn" onclick="cancelTeamInvite('${reportEscapeHtml(inv.email)}')">Cancel</button></td>
+          </tr>`).join('')
+        : '<tr><td colspan="4" style="color:var(--text-faint);">No pending invites.</td></tr>');
+    }
+  }
+
+  async function submitTeamInvite(e){
+    e.preventDefault();
+    const email = document.getElementById('team-invite-email').value.trim().toLowerCase();
+    const role = document.getElementById('team-invite-role').value;
+    try{
+      const { error } = await db.from('team_invites').upsert({
+        email, role, invited_by: currentUserId, invited_at: new Date().toISOString()
+      }, { onConflict: 'email' });
+      if(error) throw error;
+      document.getElementById('team-invite-email').value = '';
+      showToast('Invite sent — have them sign up with that email');
+      loadTeam();
+    } catch(err){
+      alert(/relation .*team_invites.* does not exist/i.test(err.message||'') ? 'The "team_invites" table needs to be set up first — see the note below the invite form.' : err.message);
+    }
+    return false;
+  }
+
+  async function cancelTeamInvite(email){
+    if(!confirm(`Cancel the invite for ${email}?`)) return;
+    const { error } = await db.from('team_invites').delete().eq('email', email);
+    if(error) alert(error.message); else loadTeam();
+  }
+
+  async function updateTeamMemberRole(id, selectEl){
+    const newRole = selectEl.value;
+    const { error } = await db.from('profiles').update({ role: newRole }).eq('id', id);
+    if(error){ alert(error.message); loadTeam(); return; }
+    showToast('Role updated');
+  }
+
+  async function removeTeamMember(id, label){
+    if(!confirm(`Remove ${label}'s access to this dashboard?\n\nThis deletes their profile here so they can no longer get past login. Their underlying account isn't fully deleted — do that from the Supabase dashboard if you need it gone completely.`)) return;
+    const { error } = await db.from('profiles').delete().eq('id', id);
+    if(error) alert(error.message); else { showToast('Access removed'); loadTeam(); }
   }
 
   async function loadDashboardOverview(){
